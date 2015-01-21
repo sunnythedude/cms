@@ -7,12 +7,36 @@ server.connection({
     port: 8000
 });
 
+server.route({
+    method: 'GET',
+    path: '/{param*}',
+    handler: {
+        directory: {
+            path: "public",
+            listing: true,
+            index: false
+        }
+    }
+});
+
+server.route({
+    method: 'GET',
+    path: '/shared/{param*}',
+    handler: {
+        directory: {
+            path: "shared",
+            listing: true,
+            index: false
+        }
+    }
+});
+
 // Add the route
 server.route({
     method: 'GET',
     path: '/flickr',
-    handler: function (request, reply) {
-        var credentials = require('./credentials.js'),
+    handler: function(request, reply) {
+        var credentials = require('./shared/credentials.js'),
                 httpRequest = require('request'),
                 flickr = {
                     "url": 'https://api.flickr.com/services/rest/',
@@ -25,7 +49,7 @@ server.route({
                     },
                     "json": true //converts text to json
                 };
-        httpRequest(flickr, function (error, incomingMessage, response) {
+        httpRequest(flickr, function(error, incomingMessage, response) {
             if (!error && incomingMessage.statusCode == 200) {
                 reply(response); //Browser output // Show the HTML fot the google homepage
                 console.log("Command window");
@@ -34,21 +58,7 @@ server.route({
     }
 });
 
-server.route({
-    method: 'GET',
-    path: '/google',
-    handler: function (request, reply) {
-        var request = require('request');
-        request('http://www.google.com', function (error, response, body) {
-            if (!error && response.statusCode == 200) {
-                reply(body); //Browser output // Show the HTML fot the google homepage
-                console.log("Command window");
-            }
-        });
-    }
-});
-
 // Start the server
-server.start(function () {
+server.start(function() {
     console.log('Server running at ' + server.info.uri);
 });
