@@ -43,7 +43,7 @@ server.route({
 				"qs": {
 					"method": 'flickr.photos.search',
 					"api_key": credentials.flickr.api_key,
-					"user_id": 'credentials.flickr.user_id',
+					"tags": 'seabus',
 					"format": 'json',
 					"nojsoncallback": 1
 				},
@@ -52,11 +52,31 @@ server.route({
 		httpRequest(flickr, function (error, incomingMessage, response) {
 			if (!error && incomingMessage.statusCode === 200) {
 				var photoSrc = flickrLib.createJpgPath(response.photos.photo);
-				for (var i = 0; len = photoSrc.length; i < len; i++) {
-				html += "img src='" + photoSrc[i] + "'>";
-				};
-
 				// todo inclass: output HTML images
+				reply("<img src='hello.png'>"); // Complete browser output
+			}
+		});
+    }
+});
+
+server.route({
+    method: 'GET',
+    path:'/myflickr', 
+    handler: function (request, reply) {
+		var credentials = require('./shared/credentials.js'),
+			flickr = require('./shared/flickr.js'),
+			httpRequest = require('request');
+		flickr.options.qs = flickr.options.data;
+		flickr.options.qs.api_key = credentials.flickr.api_key;
+		flickr.options.qs.user_id = credentials.flickr.user_id;
+		
+		httpRequest(flickr.options, function (error, incomingMessage, response) {
+			if (!error && incomingMessage.statusCode === 200) {
+				var html = '';
+					photoSrc = flickr.createJpgPath(response.photos.photo);
+				for (var i = 0, len = photoSrc.length; i < len; i++) {
+					html += "<img src='" + photoSrc[i] + "'>";
+				}
 				reply(html); // Complete browser output
 			}
 		});

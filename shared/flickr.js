@@ -1,42 +1,31 @@
-var httpRequest = require('request');
-var credentials = require('./credentials.js');
-var flickr = {
-	flickrSettings : {
-		"url": "https://api.flickr.com/services/rest/",
-			"method": "GET", // default;
-			"qs": {
-				
-				"format": "json",
-				"nojsoncallback": 1,
-				"api_key": credentials.flickr.api_key
-			},
-			"json": true,
-		}, 
-		initSettings: function () {
-			flickr.flickrSettings.qs = {
-				"format": "json",
-				"nojsoncallback": 1,
-				"api_key": credentials.flickr.api_key
-			}
-		},
-		createPhotoList: function (data) {
-			var i,
-			photos = data.photos.photo,
-			href,
-			photoUrl = [],
-			len = photos.length;
-			for (i = 0; i < len; i++) {
-				photo = photos[i];
-				url = "https://farm"+photo.farm+".staticflickr.com/"+photo.server+"/"+photo.id+"_"+photo.secret+".jpg";
-				photoUrl.push(url);
-			};
-			return photoUrl;
-		},
-		generateImages: function (photoUrl) {
-			return '<img src="' + photoUrl.join('"><img src="') + '">';
-		}
-		
-	};
-	if (typeof module !== "undefined") {
-		module.exports = flickr;
+// shared/flickr.js
+
+// Input[] should be Flickr's photo details including server, secret, farm
+// Output[] is the full JPG web address
+var createJpgPath = function (photos) {
+	var i,
+		photo,
+		photoSrc = [],
+		len = photos.length;
+	for (i = 0; i < len; i++) {
+		photo = photos[i];
+		// https://farm{farm-id}.staticflickr.com/{server-id}/{id}_{secret}.jpg
+		photoSrc.push("https://farm" + photo.farm + ".staticflickr.com/" + photo.server + "/" + photo.id + "_" + photo.secret + ".jpg");
 	}
+	return photoSrc;
+};
+
+var myflickrOptions = {
+	"url": 'https://api.flickr.com/services/rest/',
+	"data": {
+		"method": 'flickr.people.getPublicPhotos', // flickr.photos.search
+		"format": 'json',
+		"nojsoncallback": 1
+	},
+	"json": true
+};
+
+if (typeof module !== "undefined") {
+	module.exports.createJpgPath = createJpgPath;
+	module.exports.options = myflickrOptions;
+}
