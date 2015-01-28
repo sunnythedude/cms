@@ -43,7 +43,7 @@ server.route({
 				"qs": {
 					"method": 'flickr.photos.search',
 					"api_key": credentials.flickr.api_key,
-					"tags": 'seabus',
+					"user_id": 'credentials.flickr.user_id',
 					"format": 'json',
 					"nojsoncallback": 1
 				},
@@ -52,8 +52,12 @@ server.route({
 		httpRequest(flickr, function (error, incomingMessage, response) {
 			if (!error && incomingMessage.statusCode === 200) {
 				var photoSrc = flickrLib.createJpgPath(response.photos.photo);
+				for (var i = 0; len = photoSrc.length; i < len; i++) {
+				html += "img src='" + photoSrc[i] + "'>";
+				};
+
 				// todo inclass: output HTML images
-				reply("<img src='hello.png'>"); // Complete browser output
+				reply(html); // Complete browser output
 			}
 		});
     }
