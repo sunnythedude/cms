@@ -1,64 +1,55 @@
-var Hapi = require('hapi');
+(function(){
+	var Hapi = require('hapi');
+	var httpRequest = require('request');
 
 // Create a server with a host and port
-var server = new Hapi.Server();
+var  server = new Hapi.Server();
+
 server.connection({
-    host: 'localhost',
-    port: 8000
+	host: 'localhost',
+	port: 8000,
+});
+
+// Routes
+server.route({
+	method: 'GET',
+	path: '/',
+	handler: function (request, reply) {
+		reply("homepage");
+	}
 });
 
 server.route({
-    method: 'GET',
-    path: '/{param*}',
-    handler: {
-        directory: {
-            path: "public",
-            listing: true,
-            index: false
-        }
-    }
+	method: 'GET',
+	path: '/myflickr',
+	handler: function (request, reply) {
+		var flickr = require('./share/flickr.js');
+		var credentials = require('./share/credentials.js');
+		flickr.initSettings();
+		flickr.flickrSettings.qs.user_id = credentials.flickr.user_id;
+		flickr.flickrSettings.qs.method = "flickr.people.getPhotos";
+
+		httpRequest(flickr.flickrSettings, function (err, res, body) {
+			if (!err && res.statusCode == 200) {
+				reply(flickr.generateImages(flickr.createPhotoList(body)));	
+			};
+		});
+	}
 });
 
 server.route({
-    method: 'GET',
-    path: '/shared/{param*}',
-    handler: {
-        directory: {
-            path: "shared",
-            listing: true,
-            index: false
-        }
-    }
+	method: 'GET',
+	path: '/{param*}',
+	handler: {
+		directory: {
+			path: 'public',
+			listing: true
+		}
+	}
 });
 
-// Add the route
-server.route({
-    method: 'GET',
-    path: '/flickr',
-    handler: function(request, reply) {
-        var credentials = require('./shared/credentials.js'),
-                httpRequest = require('request'),
-                flickr = {
-                    "url": 'https://api.flickr.com/services/rest/',
-                    "qs": {
-                        "method": 'flickr.photos.search',
-                        "api_key": credentials.flickr.api_key,
-                        "tags": 'vancouver',
-                        "format": 'json',
-                        "nojsoncallback": 1
-                    },
-                    "json": true //converts text to json
-                };
-        httpRequest(flickr, function(error, incomingMessage, response) {
-            if (!error && incomingMessage.statusCode == 200) {
-                reply(response); //Browser output // Show the HTML fot the google homepage
-                console.log("Command window");
-            }
-        });
-    }
-});
+//Start the server;
+server.start();
+console.log('server connected by port 8000');
 
-// Start the server
-server.start(function() {
-    console.log('Server running at ' + server.info.uri);
-});
+})();

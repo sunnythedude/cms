@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8">
-        <title>4flickrAjaxLoop.html</title>
+        <title>Gallery</title>
     </head>
 
     <body>
@@ -23,45 +23,28 @@
 
         <h3>Live demo</h3>
         <!-- Flickr API global variables -->
-        <script src="./shared/credentials.js"></script>
+        <script src="shared/credentials.js"></script>
+        <script src="shared/flickr.js"></script>
         <!-- jQuery library -->
         <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
         <!-- Page specic code -->
         <script>
             $.ajax({
-            "url": 'https://api.flickr.com/services/rest/',
-                    "data": {
+                "url": 'https://api.flickr.com/services/rest/',
+                "data": {
                     "method": 'flickr.photos.search',
-                            "api_key": credentials.flickr.api_key,
-                            "tags": 'seabus',
-                            "format": 'json',
-                            "nojsoncallback": 1
-                    },
-                    "success": function(response) {
-                        //Input should be flickr's photo details including server, secret, farm 
-                        //Output is the full JPG web address
-                        var createJpgPath = function(photos) {
-                            var i,
-                                    photos = response.photos.photo, // array, learned from debugging the response structure
-                                    photo,
-                                    photoSrc = [],
-                                    len = photos.length;
-                            for (i = 0; i < len; i++) {
-                                photo = photos[i];
-                                // https://farm{farm-id}.staticflickr.com/{server-id}/{id}_{secret}.jpg
-                                photoSrc.push("https://farm" + photo.farm + ".staticflickr.com/" + photo.server + "/" + photo.id + "_" + photo.secret + ".jpg");
-                            }
-                            return photoSrc;
-                        };   
-
-                            var photoSrc = createJpgPath(response.photos.photo);
-                            $.each(photoSrc, function(i, src) {
-                                $('body').append('<img src="' + src + '">');
-                            });
-
-                            
-                        }
+                    "api_key": credentials.flickr.api_key,
+                    "tags": 'seabus',
+                    "format": 'json',
+                    "nojsoncallback": 1
+                },
+                "success": function(response) {
+                    var photoSrc = createJpgPath(response.photos.photo);
+                    $.each(photoSrc, function(i, src) {
+                        $('body').append('<img src="' + src + '">');
                     });
+                }
+            });
         </script>
     </body>
 </html>
