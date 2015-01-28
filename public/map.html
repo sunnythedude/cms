@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>map.html</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+    </head>
+    <body>
+        <h3>Live demo</h3>
+        <div id="mapBox" style="height: 400px;"></div>
+        
+        
+        <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+        <script src="map/mxn.js?(leaflet)"></script>
+        <script>
+            var map = new mxn.Mapstraction('mapBox', 'leaflet');
+            var latlon = new mxn.LatLonPoint(39.74, -104.98);
+            
+            map.setCenterAndZoom(latlon, 10);
+        </script>
+    </body>
+</html>
