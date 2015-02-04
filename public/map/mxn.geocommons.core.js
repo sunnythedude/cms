@@ -4,6 +4,11 @@ mxn.register('geocommons', {
 
 		init: function(element, api) {
 			var me = this;
+
+			if (typeof F1.Maker.Map === 'undefined') {
+				throw new Error(api + ' map script not imported');
+			}
+
 			this.element = element;
 			this.loaded[this.api] = false; // Loading will take a little bit.
 			
@@ -29,7 +34,6 @@ mxn.register('geocommons', {
 				onFeatureSelected: function() {
 					me.click.fire();
 				}
-
 			});
 			
 		},
@@ -196,7 +200,7 @@ mxn.register('geocommons', {
 			map.loadMap(match[1]);
 		},
 
-		addTileLayer: function(tile_url, opacity, copyright_text, min_zoom, max_zoom) {
+		addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
 			var map = this.maps[this.api];
 
 			map.addLayer({source: "tile:" + tile_url, styles: {fill: {opacity: opacity || 1.0}}});

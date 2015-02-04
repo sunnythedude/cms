@@ -3,29 +3,41 @@ mxn.register('microsoft7', {
 Mapstraction: {
 	init: function(element, api) {
 		var me = this;
-		
-		if (!Microsoft || !Microsoft.Maps) {
-			throw api + ' map script not imported';
+
+		if (typeof Microsoft.Maps === 'undefined') {
+			throw new Error(api + ' map script not imported');
 		}
-		this.maps[api] = new Microsoft.Maps.Map(element, { credentials: microsoft_key } );
-		//Add Click Event
-		element.addEventListener('contextmenu', function(evt) { evt.preventDefault(); });
-		Microsoft.Maps.Events.addHandler(this.maps[api], 'rightclick', function(event) {
-			var map = me.maps[me.api];
-			var _x = event.getX();
-			var _y = event.getY();
-			var pixel = new Microsoft.Maps.Point(_x, _y);
-			var ll = map.tryPixelToLocation(pixel);
-			var _event = {
-					'location': new mxn.LatLonPoint(ll.latitude, ll.longitude),
-					'position': {x:_x, y:_y},
-					'button': 'right'
-				};
-			me.click.fire(_event);
-		});
+
+		// The design decisions behind the Microsoft/Bing v7 API are simply jaw dropping.
+		// Want to show/hide the dashboard or show/hide the scale bar? Nope. You can only
+		// do that when you're creating the map object. Once you've done that the map controls
+		// stay "as-is" unless you want to tear down the map and redisplay it. And as for the
+		// overview "mini-map", that's not supported at all and you have to write your own.
+		// See http://msdn.microsoft.com/en-us/library/gg427603.aspx for the whole sorry tale.
+
+		this.maps[api] = new Microsoft.Maps.Map(element, { 
+			credentials: microsoft_key,
+			enableSearchLogo: false, // Remove the pointless Bing Search advert form the map's lower left, as this has nothing to do with the map
+			enableClickableLogo: false // Stop the Bing logo from being clickable, so no-one accidently clicks it and leaves the map
+			} );
+		//Now get the update the microsoft key to be session key for geocoding use later without racking up api hits
+		this.maps[api].getCredentials(function(credentials) 
+			{ 
+				if(credentials !== null) { microsoft_key = credentials; } 
+			});
+			
+		//Add Click Event - with IE7 workaround if needed
+		if (element.addEventListener){
+			element.addEventListener('contextmenu', function (evt) { evt.preventDefault(); });
+		} else if (element.attachEvent){
+			element.attachEvent('contextmenu', function (evt) { evt.preventDefault(); });
+		}
+
 		Microsoft.Maps.Events.addHandler(this.maps[api], 'click', function(event){
 			var map = me.maps[me.api];
-			event.originalEvent.preventDefault();
+			if (event.originalEvent.preventDefault) {
+		        event.originalEvent.preventDefault();
+		    }
 			if (event.targetType == 'pushpin') {
 				event.target.mapstraction_marker.click.fire();
 			}
@@ -42,29 +54,24 @@ Mapstraction: {
 				me.click.fire(_event);
 			}
 		});
-		Microsoft.Maps.Events.addHandler(this.maps[api], 'viewchangeend', function(event){
-			me.changeZoom.fire();
-		});
-		Microsoft.Maps.Events.addHandler(this.maps[api], 'viewchangeend', function(event){
-			me.endPan.fire();
-		});
-		Microsoft.Maps.Events.addHandler(this.maps[api], 'viewchange', function(event){
-			me.endPan.fire();
+
+		Microsoft.Maps.Events.addHandler(this.maps[api], 'viewchangeend', me.changeZoom.fire);
+		Microsoft.Maps.Events.addHandler(this.maps[api], 'viewchangeend', me.endPan.fire);    
+	
+		var loadListener = Microsoft.Maps.Events.addHandler(this.maps[api], 'tiledownloadcomplete', function(event) {
+			me.load.fire();
+			Microsoft.Maps.Events.removeHandler(loadListener);
 		});
 	},
 	
 	applyOptions: function(){
 		var map = this.maps[this.api];
-		
-		var myOptions = [];
-		if (!this.options.enableDragging) {
-			myOptions.disablePanning = true;
-		} 
-		if (!this.options.enableScrollWheelZoom) {
-			myOptions.disableZooming = true;
-		} 
-		// map.setOptions(myOptions);
-		// TODO: Add provider code
+		var opts = map.getOptions();
+
+		opts.disablePanning = !this.options.enableDragging;
+		opts.disableZooming = !this.options.enableScrollWheelZoom;
+
+		map.setOptions(opts);
 	},
 
 	resizeTo: function(width, height){	
@@ -72,28 +79,34 @@ Mapstraction: {
 		map.setOptions(height,width);
 	},
 
+	// Code Health Warning
+	// Microsoft7 only supports (most of) the display controls as part of the Dashboard
+	// and this needs to be configured *before* the map is instantiated and displayed.
+	// So addControls, addSmallControls, addLargeControls and addMapTypeControls are
+	// effectively no-ops and so they don't throw the unsupported feature exception.
+	
 	addControls: function( args ) {
 		var map = this.maps[this.api];
 	
-		// TODO: Add provider code
+		//throw new Error('Mapstraction.addControls is not currently supported by provider ' + this.api);
 	},
 
 	addSmallControls: function() {
 		var map = this.maps[this.api];
 		
-		// TODO: Add provider code
+		//throw new Error('Mapstraction.addSmallControls is not currently supported by provider ' + this.api);
 	},
 
 	addLargeControls: function() {
 		var map = this.maps[this.api];
 		
-		// TODO: Add provider code
+		//throw new Error('Mapstraction.addLargeControls is not currently supported by provider ' + this.api);
 	},
 
 	addMapTypeControls: function() {
 		var map = this.maps[this.api];
 		
-		// TODO: Add provider code
+		//throw new Error('Mapstraction.addMapTypeControls is not currently supported by provider ' + this.api);
 	},
 
 	setCenterAndZoom: function(point, zoom) { 
@@ -128,7 +141,7 @@ Mapstraction: {
 	declutterMarkers: function(opts) {
 		var map = this.maps[this.api];
 		
-		// TODO: Add provider code
+		throw new Error('Mapstraction.declutterMarkers is not currently supported by provider ' + this.api);
 	},
 
 	addPolyline: function(polyline, old) {
@@ -172,18 +185,12 @@ Mapstraction: {
 		var options = map.getOptions();
 		options.zoom = zoom;
 		map.setView(options);
-		
 	},
 	
 	getZoom: function() {
 		var map = this.maps[this.api];
-		var zoom;
 		
-		var options = map.getOptions();
-		zoom = options.zoom;
-		// TODO: Add provider code
-		
-		return zoom;
+		return map.getZoom();
 	},
 
 	getZoomLevelForBoundingBox: function( bbox ) {
@@ -193,9 +200,7 @@ Mapstraction: {
 		var sw = bbox.getSouthWest();
 		var zoom;
 		
-		// TODO: Add provider code
-		
-		return zoom;
+		throw new Error('Mapstraction.getZoomLevelForBoundingBox is not currently supported by provider ' + this.api);
 	},
 
 	setMapType: function(type) {
@@ -205,10 +210,10 @@ Mapstraction: {
 		switch (type) {
 			case mxn.Mapstraction.ROAD:
 				options.mapTypeId = Microsoft.Maps.MapTypeId.road;
-				
 				break;
 			case mxn.Mapstraction.SATELLITE:
 				options.mapTypeId = Microsoft.Maps.MapTypeId.aerial;
+				options.labelOverlay = Microsoft.Maps.LabelOverlay.hidden;
 				break;
 			case mxn.Mapstraction.HYBRID:
 				options.mapTypeId = Microsoft.Maps.MapTypeId.birdseye;
@@ -238,72 +243,96 @@ Mapstraction: {
 
 	getBounds: function () {
 		var map = this.maps[this.api];
-		var options = map.getOptions();
-		// TODO: Add provider code
-		var nw = options.bounds.getNorthwest;
-		var se = options.bounds.getSoutheast;
-		return new mxn.BoundingBox(se.latitude,nw.longitude	,nw.latitude	, se.longitude );
+		var bounds = map.getBounds();
+		var nw = bounds.getNorthwest();
+		var se = bounds.getSoutheast();
+		
+		return new mxn.BoundingBox(se.latitude, nw.longitude, nw.latitude, se.longitude);
 	},
 
 	setBounds: function(bounds){
 		var map = this.maps[this.api];
-		var sw = bounds.getSouthWest();
-		var ne = bounds.getNorthEast();
-		var viewRect = Microsoft.Maps.LocationRect.fromCorners(new Microsoft.Maps.Location(sw.lat,ne.lon), new Microsoft.Maps.Location(ne.at,sw.lon));
+		var nw = bounds.getNorthWest();
+		var se = bounds.getSouthEast();
+		var viewRect = Microsoft.Maps.LocationRect.fromCorners(new Microsoft.Maps.Location(nw.lat, nw.lon), new Microsoft.Maps.Location(se.lat ,se.lon));
 		var options = map.getOptions();
 		options.bounds = viewRect;
 		options.center = null;
 		map.setView(options);
-		
 	},
 
 	addImageOverlay: function(id, src, opacity, west, south, east, north, oContext) {
-		var map = this.maps[this.api];
-		
-		// TODO: Add provider code
+		throw new Error('Mapstraction.addImageOverlay is not currently supported by provider ' + this.api);
 	},
 
 	setImagePosition: function(id, oContext) {
-		var map = this.maps[this.api];
-		var topLeftPoint; var bottomRightPoint;
-
-		// TODO: Add provider code
-
-		//oContext.pixels.top = ...;
-		//oContext.pixels.left = ...;
-		//oContext.pixels.bottom = ...;
-		//oContext.pixels.right = ...;
+		throw new Error('Mapstraction.setImagePosition is not currently supported by provider ' + this.api);
 	},
 	
 	addOverlay: function(url, autoCenterAndZoom) {
-		var map = this.maps[this.api];
-		
-		// TODO: Add provider code
-		
+		throw new Error('Mapstraction.addOverlay is not currently supported by provider ' + this.api);
 	},
 
-	addTileLayer: function(tile_url, opacity, copyright_text, min_zoom, max_zoom, map_type) {
+	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
 		var map = this.maps[this.api];
+		var z_index = this.tileLayers.length || 0;
+
+		 var newtileobj = {
+			getTileUrl: function(tile){
+				return tile_url.replace(/\{Z\}/gi, tile.levelOfDetail).replace(/\{X\}/gi, tile.x).replace(/\{Y\}/gi, tile.y);
+			}
+		 };
+
+        var tileSource = new Microsoft.Maps.TileSource({ uriConstructor: newtileobj.getTileUrl});
+
+        var tileLayerOptions = {};
+        tileLayerOptions.mercator = tileSource;
+		tileLayerOptions.opacity = opacity;
+
+        // Construct the layer using the tile source
+        var tilelayer = new Microsoft.Maps.TileLayer(tileLayerOptions);
+
+        // Push the tile layer to the map
+        map.entities.push(tilelayer);
 		
-		// TODO: Add provider code
+		this.tileLayers.push( [tile_url, tilelayer, true, z_index] );
+		return tilelayer;
 	},
 
 	toggleTileLayer: function(tile_url) {
 		var map = this.maps[this.api];
-		
-		// TODO: Add provider code
+		for (var f = 0; f < this.tileLayers.length; f++) {
+			var tileLayer = this.tileLayers[f];
+			if (tileLayer[0] == tile_url) {
+				if (tileLayer[2]) {
+					tileLayer[2] = false;
+				}
+				else {
+					tileLayer[2] = true;
+				}
+				tileLayer[1].setOptions({ visible: tileLayer[2]});
+			}
+		}
 	},
 
 	getPixelRatio: function() {
-		var map = this.maps[this.api];
-
-		// TODO: Add provider code	
+		throw new Error('Mapstraction.getPixelRatio is not currently supported by provider ' + this.api);
 	},
 	
 	mousePosition: function(element) {
 		var map = this.maps[this.api];
-
-		// TODO: Add provider code	
+		var locDisp = document.getElementById(element);
+		if (locDisp !== null) {
+			Microsoft.Maps.Events.addHandler(map, 'mousemove', function (e) {
+				if (typeof (e.target.tryPixelToLocation) != 'undefined') {
+					var point = new Microsoft.Maps.Point(e.getX(), e.getY());
+					var coords = e.target.tryPixelToLocation(point);
+					var loc = coords.latitude.toFixed(4) + '/' + coords.longitude.toFixed(4);
+					locDisp.innerHTML = loc;
+				}
+			});
+			locDisp.innerHTML = '0.0000 / 0.0000';
+		}
 	}
 },
 
@@ -348,34 +377,44 @@ Marker: {
 		}
 		var mmarker = new Microsoft.Maps.Pushpin(this.location.toProprietary('microsoft7'), options); 
 
-		if (this.infoBubble){
-			var event_action = "click";
-			if (this.hover) {
-				event_action = "mouseover";
-			}
-			Microsoft.Maps.Events.addHandler(mmarker, event_action, function() {
-				mmarker.mapstraction_marker.openBubble();
-			});
-			Microsoft.Maps.Events.addHandler(this.map, 'viewchange', function () {
-				mmarker.mapstraction_marker.closeBubble();
-			});
-		}
+		var that = this;
+		Microsoft.Maps.Events.addHandler(mmarker, 'mouseover', function(){
+			if (that.hover && that.infoBubble) 
+				{
+					that.openBubble();
+
+					if (!that.infowindow_mouseleave){
+						that.infowindow_mouseleave = Microsoft.Maps.Events.addHandler(that.proprietary_infowindow, 'mouseleave', function(){
+							if (that.infoBubble && that.proprietary_infowindow) 
+								{
+									that.closeBubble();
+									if (that.infowindow_mouseleave) {
+										Microsoft.Maps.Events.removeHandler(that.infowindow_mouseleave);
+										that.infowindow_mouseleave = null;
+										}
+								}
+							}); 
+						}
+				}
+		});
+		
 		return mmarker;
 	},
 
-	openBubble: function() {		
-		var infowindow = new Microsoft.Maps.InfoBox({
-			description: this.infoBubble
-		});
+	openBubble: function() {
+		var infowindow = new Microsoft.Maps.Infobox(this.location.toProprietary('microsoft7'),
+			{
+				description: this.infoBubble
+			});
 		
-		this.events.openInfoBubble.fire({'marker': this});
+		this.openInfoBubble.fire({'marker': this});
 		this.map.entities.push(infowindow);
 		infowindow.setOptions({visible: true});
 		this.proprietary_infowindow = infowindow; // Save so we can close it later
 	},
 	closeBubble: function() {
 		if (!this.map) {
-			throw 'Marker must be added to map in order to display infobox';
+			throw new Error('Marker.closeBubble; marker must be added to map in order to display infobox');
 		}
 		if (!this.proprietary_infowindow) {
 			return;
@@ -402,15 +441,30 @@ Marker: {
 Polyline: {
 
 	toProprietary: function() {
-		var points = [];
+		var coords = [];
+
 		for (var i = 0, length = this.points.length; i < length; i++) {
-			points.push(this.points[i].toProprietary(this.api));
+			coords.push(this.points[i].toProprietary(this.api));
 		}
 		
-		var strokeColor = Microsoft.Maps.Color.fromHex(this.color || '#000000');
-		strokeColor.a = this.opacity * 255;
-		var fillColor = Microsoft.Maps.Color.fromHex(this.fillColor || '#000000');
-		fillColor.a = this.fillOpacity * 255;
+		if (this.closed) {
+			if (!(this.points[0].equals(this.points[this.points.length - 1]))) {
+				coords.push(coords[0]);
+			}
+		}
+
+		else if (this.points[0].equals(this.points[this.points.length - 1])) {
+			this.closed = true;
+		}
+
+		var strokeColor = Microsoft.Maps.Color.fromHex(this.color);
+		if (this.opacity) {
+			strokeColor.a = this.opacity * 255;
+		}
+		var fillColor = Microsoft.Maps.Color.fromHex(this.fillColor);
+		if (this.opacity) {
+			fillColor.a = this.opacity * 255;
+		}
 		
 		var polyOptions = {
 			strokeColor: strokeColor,
@@ -419,14 +473,13 @@ Polyline: {
 
 		if (this.closed) {
 			polyOptions.fillColor = fillColor;
-			points.push(this.points[0].toProprietary(this.api));
-			return new Microsoft.Maps.Polygon(points, polyOptions);
+			this.proprietary_polyline = new Microsoft.Maps.Polygon(coords, polyOptions);
 		}
 		else {
-			console.log("Rendering PolyLine");
-			return new Microsoft.Maps.Polyline(points, polyOptions);
+			this.proprietary_polyline = new Microsoft.Maps.Polyline(coords, polyOptions);
 		}
 
+		return this.proprietary_polyline;
 	},
 	
 	show: function() {

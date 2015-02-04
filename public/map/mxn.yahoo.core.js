@@ -1,34 +1,35 @@
 mxn.register('yahoo', {	
 
 Mapstraction: {
-	
-	init: function(element,api) {		
-		var me = this;
-		if (YMap) {
-			this.maps[api] = new YMap(element);
+	init: function(element,api) {
+		throw new Error('The Yahoo! Maps API is now obsolete and no longer supported by Mapstraction');
 
-			YEvent.Capture(this.maps[api], EventsList.MouseClick, function(event,location) {
-				me.clickHandler(location.Lat, location.Lon, location, me);
-				me.click.fire({'location': new mxn.LatLonPoint(location.Lat, location.Lon)});
-			});
-			YEvent.Capture(this.maps[api], EventsList.changeZoom, function() {
-				me.moveendHandler(me);
-				me.changeZoom.fire();
-			});
-			YEvent.Capture(this.maps[api], EventsList.endPan, function() {
-				me.moveendHandler(me);
-				me.endPan.fire();
-			});
-			YEvent.Capture(this.maps[api], EventsList.endAutoPan, function() {
-				me.endPan.fire();
-			});
-			
-			this.loaded[api] = true;
-			me.load.fire();
+		/*var me = this;
+		
+		if (!YMap) {
+			throw new Error(api + ' map script not imported');
 		}
-		else {
-			alert(api + ' map script not imported');
-		}  
+
+		this.maps[api] = new YMap(element);
+
+		YEvent.Capture(this.maps[api], EventsList.MouseClick, function(event,location) {
+			me.clickHandler(location.Lat, location.Lon, location, me);
+			me.click.fire({'location': new mxn.LatLonPoint(location.Lat, location.Lon)});
+		});
+		YEvent.Capture(this.maps[api], EventsList.changeZoom, function() {
+			me.moveendHandler(me);
+			me.changeZoom.fire();
+		});
+		YEvent.Capture(this.maps[api], EventsList.endPan, function() {
+			me.moveendHandler(me);
+			me.endPan.fire();
+		});
+		YEvent.Capture(this.maps[api], EventsList.endAutoPan, function() {
+			me.endPan.fire();
+		});
+		
+		this.loaded[api] = true;
+		me.load.fire();*/
 	},
 	
 	applyOptions: function(){
@@ -251,7 +252,7 @@ Mapstraction: {
 		map.addOverlay(new YGeoRSS(url));
 	},
 	
-	addTileLayer: function(tile_url, opacity, copyright_text, min_zoom, max_zoom) {
+	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
 		throw 'Not implemented';
 	},
 

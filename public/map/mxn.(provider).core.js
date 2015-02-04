@@ -5,6 +5,10 @@ Mapstraction: {
 	init: function(element, api) {		
 		var me = this;
 		
+		if (typeof map-provider-namespace === 'undefined') {
+			throw new Error(api + ' map script not imported');
+		}
+		
 		// TODO: Add provider code
 	},
 	
@@ -203,7 +207,7 @@ Mapstraction: {
 		
 	},
 
-	addTileLayer: function(tile_url, opacity, copyright_text, min_zoom, max_zoom, map_type) {
+	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
 		var map = this.maps[this.api];
 		
 		// TODO: Add provider code

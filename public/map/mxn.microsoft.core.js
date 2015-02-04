@@ -4,11 +4,33 @@ Mapstraction: {
 	
 	init: function(element, api) {		
 		var me = this;
-		if (!VEMap) {
-			throw api + ' map script not imported';
-		}
 		
+		if (typeof VEMap === 'undefined') {
+			throw new Error(api + ' map script not imported');
+		}
+
+		this._fireOnNextCall = [];
+		this._fireQueuedEvents =  function() {
+			var fireListCount = me._fireOnNextCall.length;
+			if (fireListCount > 0) {
+				var fireList = me._fireOnNextCall.splice(0, fireListCount);
+				var handler;
+				while ((handler = fireList.shift())) {
+					handler();
+				}
+			}
+		};
+
+		this.controls =  {
+			zoom: false,
+			overview: false,
+			map_type: false,
+			scale: false
+		};
+
 		this.maps[api] = new VEMap(element.id);
+		this.maps[api].HideDashboard();
+		
 		this.maps[api].AttachEvent('onclick', function(event){
 			me.clickHandler();
 			var map = me.maps[me.api];
@@ -41,15 +63,23 @@ Mapstraction: {
 		this.maps[api].AttachEvent('onchangeview', function(event){
 			me.endPan.fire();				
 		});
+
+		this.maps[this.api].SetDashboardSize(VEDashboardSize.Normal);
 		this.maps[api].LoadMap();
-		document.getElementById("MSVE_obliqueNotification").style.visibility = "hidden"; 
+		//document.getElementById("MSVE_obliqueNotification").style.visibility = "hidden"; 
 	
 		//removes the bird's eye pop-up
 		this.loaded[api] = true;
-		me.load.fire();	
+		
+		me._fireOnNextCall.push(function() {
+			me.load.fire();
+		});
 	},
 	
 	applyOptions: function(){
+		// applyOptions is called by mxn.core.js immediate after the provider specific call
+		// to init, so don't check for queued events just yet.
+		//this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		if(this.options.enableScrollWheelZoom){
 			map.enableContinuousZoom();
@@ -58,47 +88,90 @@ Mapstraction: {
 	},
 
 	resizeTo: function(width, height){	
+		this._fireQueuedEvents();
 		this.maps[this.api].Resize(width, height);
 	},
 
 	addControls: function( args ) {
+		/* args = { 
+		 *     pan:      true,
+		 *     zoom:     'large' || 'small',
+		 *     overview: true,
+		 *     scale:    true,
+		 *     map_type: true,
+		 * }
+		 */
+
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		
-		if (args.pan) {
-			map.SetDashboardSize(VEDashboardSize.Normal);
+		// Yuck. Microsoft 6 only lets you set the size of the dashboard before you
+		// load the map for the first time. What a genius design decision that is.
+		
+		if (('zoom' in args && args.zoom == 'small' || args.zoom == 'large') || ('pan' in args && args.pan)) {
+			if (!this.controls.zoom) {
+				map.ShowDashboard();
+				this.controls.zoom = true;
+			}
 		}
+		
 		else {
-			map.SetDashboardSize(VEDashboardSize.Tiny);
+			if (this.controls.zoom) {
+				map.HideDashboard();
+				this.controls.zoom = false;
+			}
+		}
+		if ('overview' in args && args.overview) {
+			if (!this.controls.overview) {
+				map.ShowMiniMap(0, 150, VEMiniMapSize.Small);
+				this.controls.overview = true;
+			}
 		}
 
-		if (args.zoom == 'large') {
-			map.SetDashboardSize(VEDashboardSize.Small);
-		}
-		else if ( args.zoom == 'small' ) {
-			map.SetDashboardSize(VEDashboardSize.Tiny);
-		}
 		else {
-			map.HideDashboard();
-			map.HideScalebar();
+			if (this.controls.overview) {
+				map.HideMiniMap();
+				this.controls.overview = false;
+			}
+		}
+		
+		if ('scale' in args && args.scale) {
+			if (!this.controls.scale) {
+				map.ShowScalebar();
+				this.controls.scale = true;
+			}
+		}
+		
+		else {
+			if (this.controls.scale) {
+				map.HideScalebar();
+				this.controls.scale = false;
+			}
 		}
 	},
 
 	addSmallControls: function() {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		map.SetDashboardSize(VEDashboardSize.Tiny);
+		if (!this.controls.zoom) {
+			map.ShowDashboard();
+			this.controls.zoom = true;
+		}
 	},
 
 	addLargeControls: function() {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		map.SetDashboardSize(VEDashboardSize.Normal);
-		this.addControlsArgs.pan = true;
-		this.addControlsArgs.zoom = 'large';
+		if (!this.controls.zoom) {
+			map.ShowDashboard();
+			this.controls.zoom = true;
+		}
 	},
 
 	addMapTypeControls: function() {
-		var map = this.maps[this.api];
-		map.addTypeControl();
-	
+		this._fireQueuedEvents();
 	},
 
 	dragging: function(on) {
@@ -112,6 +185,7 @@ Mapstraction: {
 	},
 
 	setCenterAndZoom: function(point, zoom) { 
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var pt = point.toProprietary(this.api);
 		var vzoom =	zoom;
@@ -119,6 +193,7 @@ Mapstraction: {
 	},
 	
 	addMarker: function(marker, old) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		marker.pinID = "mspin-"+new Date().getTime()+'-'+(Math.floor(Math.random()*Math.pow(2,16)));
 		var pin = marker.toProprietary(this.api);
@@ -133,6 +208,7 @@ Mapstraction: {
 	},
 
 	removeMarker: function(marker) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var id = marker.proprietary_marker.GetID();
 		var microsoftShape = map.GetShapeByID(id);
@@ -140,12 +216,13 @@ Mapstraction: {
 	},
 	
 	declutterMarkers: function(opts) {
-		var map = this.maps[this.api];
-		
-		// TODO: Add provider code
+		this._fireQueuedEvents();
+
+		throw new Error('Mapstraction.declutterMarkers is not currently supported by provider ' + this.api);
 	},
 
 	addPolyline: function(polyline, old) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var pl = polyline.toProprietary(this.api);
 		pl.HideIcon(); //hide the icon VE automatically displays
@@ -154,6 +231,7 @@ Mapstraction: {
 	},
 
 	removePolyline: function(polyline) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var id = polyline.proprietary_polyline.GetID();
 		var microsoftShape = map.GetShapeByID(id);
@@ -161,6 +239,7 @@ Mapstraction: {
 	},
 	
 	getCenter: function() {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var LL = map.GetCenter();
 		var point = new mxn.LatLonPoint(LL.Latitude, LL.Longitude);
@@ -168,35 +247,38 @@ Mapstraction: {
 	},
  
 	setCenter: function(point, options) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var pt = point.toProprietary(this.api);
 		map.SetCenter(new VELatLong(point.lat, point.lon));
 	},
 
 	setZoom: function(zoom) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		map.SetZoomLevel(zoom);
 	},
 	
 	getZoom: function() {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var zoom = map.GetZoomLevel();
 		return zoom;
 	},
 
 	getZoomLevelForBoundingBox: function( bbox ) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		// NE and SW points from the bounding box.
 		var ne = bbox.getNorthEast();
 		var sw = bbox.getSouthWest();
 		var zoom;
 		
-		// TODO: Add provider code
-		
-		return zoom;
+		throw new Error('Mapstraction.getZoomLevelForBoundingBox is not currently supported by provider ' + this.api);
 	},
 
 	setMapType: function(type) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		switch(type) {
 			case mxn.Mapstraction.ROAD:
@@ -214,6 +296,7 @@ Mapstraction: {
 	},
 
 	getMapType: function() {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var mode = map.GetMapStyle();
 		switch(mode){
@@ -229,6 +312,7 @@ Mapstraction: {
 	},
 
 	getBounds: function () {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		view = map.GetMapView();
 		var topleft = view.TopLeftLatLong;
@@ -238,6 +322,7 @@ Mapstraction: {
 	},
 
 	setBounds: function(bounds){
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var sw = bounds.getSouthWest();
 		var ne = bounds.getNorthEast();
@@ -247,43 +332,45 @@ Mapstraction: {
 	},
 
 	addImageOverlay: function(id, src, opacity, west, south, east, north, oContext) {
-		var map = this.maps[this.api];
-		
-		// TODO: Add provider code
+		this._fireQueuedEvents();
+
+		throw new Error('Mapstraction.addImageOverlay is not currently supported by provider ' + this.api);
 	},
 
 	setImagePosition: function(id, oContext) {
-		var map = this.maps[this.api];
-		var topLeftPoint; var bottomRightPoint;
+		this._fireQueuedEvents();
 
-		// TODO: Add provider code
-
-		//	oContext.pixels.top = ...;
-		//	oContext.pixels.left = ...;
-		//	oContext.pixels.bottom = ...;
-		//	oContext.pixels.right = ...;
+		throw new Error('Mapstraction.setImagePosition is not currently supported by provider ' + this.api);
 	},
 	
 	addOverlay: function(url, autoCenterAndZoom) {
+		this._fireQueuedEvents();
 		var map = this.maps[this.api];
 		var layer = new VEShapeLayer(); 
 		var mlayerspec = new VEShapeSourceSpecification(VEDataType.GeoRSS, url, layer);
 		map.ImportShapeLayerData(mlayerspec);
 	},
 
-	addTileLayer: function(tile_url, opacity, copyright_text, min_zoom, max_zoom) {
-		throw 'Not implemented';
+	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
+		this._fireQueuedEvents();
+
+		throw new Error('Mapstraction.addTileLayer is not currently supported by provider ' + this.api);
 	},
 
 	toggleTileLayer: function(tile_url) {
-		throw 'Not implemented';
+		this._fireQueuedEvents();
+
+		throw new Error('Mapstraction.toggleTileLayer is not currently supported by provider ' + this.api);
 	},
 
 	getPixelRatio: function() {
-		throw 'Not implemented';
+		this._fireQueuedEvents();
+
+		throw new Error('Mapstraction.getPixelRatio is not currently supported by provider ' + this.api);
 	},
 	
 	mousePosition: function(element) {
+		this._fireQueuedEvents();
 		var locDisp = document.getElementById(element);
 		if (locDisp !== null) {
 			var map = this.maps[this.api];
@@ -339,14 +426,14 @@ Marker: {
 
 	openBubble: function() {
 		if (!this.map) {
-			throw 'Marker must be added to map in order to display infobox';
+			throw new Error('Marker.openBubble; marker must be added to map in order to display infobox');
 		}
 		this.map.ShowInfoBox(this.proprietary_marker);
 	},
 	
 	closeBubble: function() {
 		if (!this.map) {
-			throw 'Marker must be added to map in order to display infobox';
+			throw new Error('Marker.openBubble; marker must be added to map in order to display infobox');
 		}
 		this.map.HideInfoBox();
 	},
@@ -370,7 +457,8 @@ Marker: {
 Polyline: {
 
 	toProprietary: function() {
-		var mpoints = [], mtype;
+		var coords = [];
+		var mtype;
 		
 		var colorToVEColor = function(color, opacity) {
 			var mxColor = new mxn.util.Color(color);
@@ -380,26 +468,38 @@ Polyline: {
 		};
 		
 		for(var i = 0, length = this.points.length; i < length; i++) {
-			mpoints.push(this.points[i].toProprietary('microsoft'));
+			coords.push(this.points[i].toProprietary('microsoft'));
 		}
+
+		if (this.closed) {
+			if (!(this.points[0].equals(this.points[this.points.length - 1]))) {
+				coords.push(coords[0]);
+			}
+		}
+
+		else if (this.points[0].equals(this.points[this.points.length - 1])) {
+			this.closed = true;
+		}
+
 		if (this.closed) {
 			mtype = VEShapeType.Polygon;
 		}
 		else {
 			mtype = VEShapeType.Polyline;
 		}
-		var mpolyline = new VEShape(mtype, mpoints);
+
+		this.proprietary_polyline = new VEShape(mtype, coords);
 		if (this.width) {
-			mpolyline.SetLineWidth(this.width);
+			this.proprietary_polyline.SetLineWidth(this.width);
 		}
 		if (this.color) {
-			mpolyline.SetLineColor(colorToVEColor(this.color, this.opacity));
+			this.proprietary_polyline.SetLineColor(colorToVEColor(this.color, this.opacity));
 		}
 		if (this.fillColor) {
-			mpolyline.SetFillColor(colorToVEColor(this.fillColor, this.fillOpacity));
+			this.proprietary_polyline.SetFillColor(colorToVEColor(this.fillColor, this.opacity));
 		}
 
-		return mpolyline;
+		return this.proprietary_polyline;
 	},
 		
 	show: function() {
@@ -409,7 +509,6 @@ Polyline: {
 	hide: function() {
 		this.proprietary_polyline.Hide();
 	}
-	
 }
 
 });

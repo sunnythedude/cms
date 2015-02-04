@@ -3,36 +3,80 @@ mxn.register('leaflet', {
 Mapstraction: {
 	
 	init: function(element, api) {
-		if (typeof(L) != 'undefined') {
-			var me = this;
-			var map = new L.Map(element.id, {
-				zoomControl: false
-			});
-			map.addEventListener('moveend', function(){
-				me.endPan.fire();
-			}); 
-			map.on("click", function(e) {
-				me.click.fire({'location': new mxn.LatLonPoint(e.latlng.lat, e.latlng.lng)});
-			});
-			map.on("popupopen", function(e) {
-				if (e.popup._source.mxnMarker) {
-				  e.popup._source.mxnMarker.openInfoBubble.fire({'bubbleContainer': e.popup._container});
-				}
-			});
-			map.on("popupclose", function(e) {
-				if (e.popup._source.mxnMarker) {
-				  e.popup._source.mxnMarker.closeInfoBubble.fire({'bubbleContainer': e.popup._container});
-				}
-			});
-			this.layers = {};
-			this.features = [];
-			this.maps[api] = map;
-			this.setMapType();
-			this.currentMapType = mxn.Mapstraction.ROAD;
-			this.loaded[api] = true;
-		} else {
-			alert(api + ' map script not imported');
+		if (typeof L.Map === 'undefined') {
+			throw new Error(api + ' map script not imported');
 		}
+
+		var me = this;
+		var map = new L.Map(element.id, {
+			zoomControl: false
+		});
+		map.addEventListener('moveend', function(){
+			me.endPan.fire();
+		}); 
+		map.on("click", function(e) {
+			me.click.fire({'location': new mxn.LatLonPoint(e.latlng.lat, e.latlng.lng)});
+		});
+		map.on("popupopen", function(e) {
+			if (e.popup._source.mxnMarker) {
+			  e.popup._source.mxnMarker.openInfoBubble.fire({'bubbleContainer': e.popup._container});
+			}
+		});
+		map.on("popupclose", function(e) {
+			if (e.popup._source.mxnMarker) {
+			  e.popup._source.mxnMarker.closeInfoBubble.fire({'bubbleContainer': e.popup._container});
+			}
+		});
+		map.on('load', function(e) {
+			me.load.fire();
+		});
+		map.on('zoomend', function(e) {
+			me.changeZoom.fire();
+		});
+		this.layers = {};
+		this.features = [];
+		this.maps[api] = map;
+
+		this.controls =  {
+			pan: null,
+			zoom: null,
+			overview: null,
+			scale: null,
+			map_type: null
+		};
+
+		// CODE HEALTH WARNING
+		// The MapQuest Open Aerial Tiles, via http://oatile1.mqcdn.com, is being obsoleted
+		// on 15/2/13.
+		// MapQuest OSM Tiles (mxn.Mapstraction.ROAD) are via:
+		//		http://otile{s}.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg
+		// MapQuest Open Aerial Tiles (mxn.Mapstraction.SATELLITE) are now via:
+		//		http://otile{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.jpg
+		//
+		// mxn.Mapstraction.HYBRID and mxn.Mapstraction.PHYSICAL remain unavailable via
+		// Leaflet support
+		//
+		// Also note that the MQ Open Aerial tiles are only available at zoom levels 0-11
+		// outside of the US.
+
+		this.road_tile = {
+			name: 'Roads',
+			attribution: 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">',
+			url: 'http://otile{s}.mqcdn.com/tiles/1.0.0/map/{z}/{x}/{y}.jpg'
+		};
+		this.satellite_tile = {
+			name: 'Satellite',
+			attribution: 'Portions Courtesy NASA/JPL-Caltech and U.S. Depart. of Agriculture, Farm Service Agency',
+			url: 'http://otile{s}.mqcdn.com/tiles/1.0.0/sat/{z}/{x}/{y}.jpg'
+		};
+		
+		var subdomains = [1, 2, 3, 4];
+		this.addTileLayer (this.satellite_tile.url, 1.0, this.satellite_tile.name, this.satellite_tile.attribution, 0, 18, true, subdomains);
+		this.addTileLayer (this.road_tile.url, 1.0, this.road_tile.name, this.road_tile.attribution, 0, 18, true, subdomains);
+
+		this.currentMapType = mxn.Mapstraction.ROAD;
+
+		this.loaded[api] = true;
 	},
 	
 	applyOptions: function(){
@@ -51,27 +95,73 @@ Mapstraction: {
 	},
 
 	addControls: function(args) {
+		/* args = { 
+		 *     pan:      true,
+		 *     zoom:     'large' || 'small',
+		 *     overview: true,
+		 *     scale:    true,
+		 *     map_type: true,
+		 * }
+		 */
+
 		var map = this.maps[this.api];
-		if (args.zoom) {
-			var zoom = new L.Control.Zoom();
-			map.addControl(zoom);
+
+		if ('zoom' in args || ('pan' in args && args.pan)) {
+			if (args.pan || args.zoom || args.zoom == 'large' || args.zoom == 'small') {
+				this.addSmallControls();
+			}
 		}
-		if (args.map_type) {
-			var layersControl = new L.Control.Layers(this.layers, this.features);
-			map.addControl(layersControl);
+		else {
+			if (this.controls.zoom !== null) {
+				map.removeControl(this.controls.zoom);
+				this.controls.zoom = null;
+			}
+		}
+		
+		if ('scale' in args && args.scale) {
+			if (this.controls.scale === null) {
+				this.controls.scale = new L.Control.Scale();
+				map.addControl(this.controls.scale);
+			}
+		}
+		else {
+			if (this.controls.scale !== null) {
+				map.removeControl(this.controls.scale);
+				this.controls.scale = null;
+			}
+		}
+
+		if ('map_type' in args && args.map_type) {
+			this.addMapTypeControls();
+		}
+		else {
+			if (this.controls.map_type !== null) {
+				map.removeControl(this.controls.map_type);
+				this.controls.map_type = null;
+			}
 		}
 	},
 
 	addSmallControls: function() {
-		this.addControls({zoom: true, map_type: true});
+		var map = this.maps[this.api];
+		
+		if (this.controls.zoom === null) {
+			this.controls.zoom = new L.Control.Zoom();
+			map.addControl(this.controls.zoom);
+		}
 	},
 
 	addLargeControls: function() {
-		throw 'Not implemented';
+		return this.addSmallControls();
 	},
 
 	addMapTypeControls: function() {
-		throw 'Not implemented';
+		var map = this.maps[this.api];
+		
+		if (this.controls.map_type === null) {
+			this.controls.map_type = new L.Control.Layers(this.layers, this.features);
+			map.addControl(this.controls.map_type);
+		}
 	},
 
 	setCenterAndZoom: function(point, zoom) { 
@@ -94,7 +184,7 @@ Mapstraction: {
 	},
 	
 	declutterMarkers: function(opts) {
-		throw 'Not implemented';
+		throw new Error('Mapstraction.declutterMarkers is not currently supported by provider ' + this.api);
 	},
 
 	addPolyline: function(polyline, old) {
@@ -148,30 +238,25 @@ Mapstraction: {
 	setMapType: function(type) {
 		switch(type) {
 			case mxn.Mapstraction.ROAD:
-				this.addTileLayer('http://otile{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
-					name: "Roads",
-					attribution: 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">',
-					subdomains: [1,2,3,4]
-				});
+				this.layers[this.road_tile.name].bringToFront();
 				this.currentMapType = mxn.Mapstraction.ROAD;
 				break;
+
 			case mxn.Mapstraction.SATELLITE:
-				this.addTileLayer('http://oatile{s}.mqcdn.com/naip/{z}/{x}/{y}.jpg', {
-					name: "Satellite",
-					attribution: 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">',
-					subdomains: [1,2,3,4]
-				});
+				this.layers[this.satellite_tile.name].bringToFront();
 				this.currentMapType = mxn.Mapstraction.SATELLITE;
 				break;
+
 			case mxn.Mapstraction.HYBRID:
-				throw 'Not implemented';
+				break;
+			
+			case mxn.Mapstraction.PHYSICAL:
+				break;
+				
 			default:
-				this.addTileLayer('http://otile{s}.mqcdn.com/tiles/1.0.0/osm/{z}/{x}/{y}.png', {
-					name: "Roads",
-					attribution: 'Tiles Courtesy of <a href="http://www.mapquest.com/" target="_blank">MapQuest</a> <img src="http://developer.mapquest.com/content/osm/mq_logo.png">',
-					subdomains: [1,2,3,4]
-				});
+				this.layers[this.road_tile.name].bringToFront();
 				this.currentMapType = mxn.Mapstraction.ROAD;
+				break;
 		}
 	},
 
@@ -196,40 +281,74 @@ Mapstraction: {
 	},
 
 	addImageOverlay: function(id, src, opacity, west, south, east, north) {
-		throw 'Not implemented';
+		throw new Error('Mapstraction.addImageOverlay is not currently supported by provider ' + this.api);
 	},
 
 	setImagePosition: function(id, oContext) {
-		throw 'Not implemented';
+		throw new Error('Mapstraction.setImagePosition is not currently supported by provider ' + this.api);
 	},
 	
 	addOverlay: function(url, autoCenterAndZoom) {
-		throw 'Not implemented';
+		throw new Error('Mapstraction.addOverlay is not currently supported by provider ' + this.api);
 	},
 
-	addTileLayer: function(tile_url, options) {
-		var layerName;
-		if (options && options.name) {
-			layerName = options.name;
-			delete options.name;
-		} else {
-			layerName = 'Tiles';
-		}
-		this.layers[layerName] = new L.TileLayer(tile_url, options || {});
+	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
 		var map = this.maps[this.api];
-		map.addLayer(this.layers[layerName]);
+		var z_index = this.tileLayers.length || 0;
+		var options = {
+			minZoom: min_zoom,
+			maxZoom: max_zoom,
+			name: label,
+			attribution: attribution,
+			opacity: opacity
+		};
+		if (typeof subdomains !== 'undefined') {
+			options.subdomains = subdomains;
+		}
+		var url = mxn.util.sanitizeTileURL(tile_url);
+		
+		this.layers[label] = new L.TileLayer(url, options);
+		map.addLayer(this.layers[label]);
+		this.tileLayers.push([tile_url, this.layers[label], true, z_index]);
+
+		if (this.controls.map_type !== null) {
+			this.controls.map_type.addBaseLayer(this.layers[label], label);
+		}
+
+		return this.layers[label];
 	},
 
 	toggleTileLayer: function(tile_url) {
-		throw 'Not implemented';
+		var map = this.maps[this.api];
+		for (var f = 0; f < this.tileLayers.length; f++) {
+			var tileLayer = this.tileLayers[f];
+			if (tileLayer[0] == tile_url) {
+				if (tileLayer[2]) {
+					tileLayer[2] = false;
+					map.removeLayer(tileLayer[1]);
+				}
+				else {
+					tileLayer[2] = true;
+					map.addLayer(tileLayer[1]);
+				}
+			}
+		}
 	},
 
 	getPixelRatio: function() {
-		throw 'Not implemented';
+		throw new Error('Mapstraction.getPixelRatio is not currently supported by provider ' + this.api);
 	},
 	
 	mousePosition: function(element) {
-		throw 'Not implemented';
+		var map = this.maps[this.api];
+		var locDisp = document.getElementById(element);
+		if (locDisp !== null) {
+			map.on("mousemove", function(e) {
+				var loc = e.latlng.lat.toFixed(4) + '/' + e.latlng.lng.toFixed(4);
+				locDisp.innerHTML = loc;
+			});
+			locDisp.innerHTML = '0.0000 / 0.0000';
+		}
 	},
 
 	openBubble: function(point, content) {
@@ -264,30 +383,46 @@ Marker: {
 	
 	toProprietary: function() {
 		var me = this;
-		var thisIcon = L.Icon;
+		var thisIcon = null;
+		if (L.Icon.hasOwnProperty("Default")) {
+			thisIcon = L.Icon.Default;
+		}
+		else {
+			thisIcon = L.Icon;
+		}
 		if (me.iconUrl) {
 			thisIcon = thisIcon.extend({
-				iconUrl: me.iconUrl
+				options: {
+					iconUrl: me.iconUrl
+				}
 			});
 		}
 		if (me.iconSize) {
 			thisIcon = thisIcon.extend({
-				iconSize: new L.Point(me.iconSize[0], me.iconSize[1])
+				options: {
+					iconSize: new L.Point(me.iconSize[0], me.iconSize[1])
+				}
 			});
 		}
 		if (me.iconAnchor) {
 			thisIcon = thisIcon.extend({
-				iconAnchor: new L.Point(me.iconAnchor[0], me.iconAnchor[1])
+				options: {
+					iconAnchor: new L.Point(me.iconAnchor[0], me.iconAnchor[1])
+				}
 			});
 		}
 		if (me.iconShadowUrl) {
 			thisIcon = thisIcon.extend({
-				shadowUrl: me.iconShadowUrl
+				options: {
+					shadowUrl: me.iconShadowUrl
+				}
 			});
 		}
 		if (me.iconShadowSize) {
 			thisIcon = thisIcon.extend({
-				shadowSize: new L.Point(me.iconShadowSize[0], me.iconShadowSize[1])
+				options: {
+					shadowSize: new L.Point(me.iconShadowSize[0], me.iconShadowSize[1])
+				}
 			});
 		}
 		var iconObj = new thisIcon();
@@ -337,7 +472,7 @@ Marker: {
 	},
 
 	update: function() {
-		throw 'Not implemented';
+		throw new Error('Marker.update is not currently supported by provider ' + this.api);
 	}
 	
 },
@@ -345,23 +480,36 @@ Marker: {
 Polyline: {
 
 	toProprietary: function() {
-		var points = [];
+		var coords = [];
+
 		for (var i = 0,  length = this.points.length ; i< length; i++){
-			points.push(this.points[i].toProprietary('leaflet'));
+			coords.push(this.points[i].toProprietary('leaflet'));
 		}
 
 		var polyOptions = {
-			color: this.color || '#000000',
-			opacity: this.opacity || 1.0, 
-			weight: this.width || 3,
-			fillColor: this.fillColor || '#000000'
+			color: this.color,
+			opacity: this.opacity, 
+			weight: this.width,
+			fillColor: this.fillColor
 		};
 
 		if (this.closed) {
-			return new L.Polygon(points, polyOptions);
-		} else {
-			return new L.Polyline(points, polyOptions);
+			if (!(this.points[0].equals(this.points[this.points.length - 1]))) {
+				coords.push(coords[0]);
+			}
 		}
+
+		else if (this.points[0].equals(this.points[this.points.length - 1])) {
+			this.closed = true;
+		}
+
+		if (this.closed) {
+			this.proprietary_polyline = new L.Polygon(coords, polyOptions);
+		} else {
+			this.proprietary_polyline = new L.Polyline(coords, polyOptions);
+		}
+		
+		return this.proprietary_polyline;
 	},
 	
 	show: function() {

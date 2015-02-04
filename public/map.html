@@ -9,29 +9,50 @@
     <body>
         <h3>Live demo</h3>
         <div id="mapBox" style="height: 400px;"></div>
-        
-        
+
+
         <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
         <script src="map/mxn.js?(leaflet)"></script>
-        <script>
-            var map = new mxn.Mapstraction('mapBox', 'leaflet');
-                locations = {
-                    london: {
-                        lat: 51.50733, 
-                        lon: -0.12769,
-                        zoom: 10
-                    },
-                    
-                    vanarts: {
-                        lat: 49.282590, 
-                        lon: -123.114784,
-                        zoom: 500
-                    }
-                };
+
+        <script type="text/javascript">
+
+
+            var map = new mxn.Mapstraction('mapBox', 'leaflet'),
+                    locations = {
+                        london: {
+                            lat: 51.50733,
+                            lon: -0.12769,
+                            zoom: 10
+                        },
+                        vanarts: {
+                            lat: 49.282590,
+                            lon: -123.114784,
+                            zoom: 500
+                        },
+                        gastown: {
+                            lat: 49.2842749,
+                            lon: -123.1096893,
+                            zoom: 16
+                        }
+                    };
+
+            var latlon = new mxn.LatLonPoint(locations.gastown.lat, locations.gastown.lon);
+            map.setCenterAndZoom(latlon, locations.gastown.zoom);
+            map.setMapType(locations.gastown.typeMap);
+
+            var marker = new mxn.Marker(latlon);
             
-            var latlon = new mxn.LatLonPoint(locations.vanarts.lat, locations.vanarts.lon);
+            marker.setIcon('kim.png', [70, 60]);
+            marker.setShadowIcon('shadow.png', [70, 60]);
             
-            map.setCenterAndZoom(latlon, locations.vanarts.zoom);
+            map.addMarker(marker);
+            
+//          marker.addData({'infoBubble': 'Gastown, Vancouver'});
+            marker.setInfoBubble("Gastown, Vancouver <a href='https://www.google.ca/maps/place/Gastown,+Vancouver,+BC/@49.284312,-123.10878,3a,75y,145.13h,90t/data=!3m4!1e1!3m2!1sylga5IdP-CikfQYqAUZ67A!2e0!4m2!3m1!1s0x54867177614ef47b:0xd1fea64d6d378461!6m1!1e1'>  Street View</a>");
+            marker.openBubble();
+            map.addSmallControls();
+
+
         </script>
     </body>
 </html>

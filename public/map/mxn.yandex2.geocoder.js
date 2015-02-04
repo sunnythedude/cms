@@ -1,16 +1,24 @@
-mxn.register('yandex', {
+mxn.register('yandex2', {
 
 Geocoder: {
-	
-	init: function() {		
+	init: function() {
+		if (!ymaps.geocode) {
+			ymaps.load(['package.full']);
+		}
 	},
-	
-	geocode: function(address, rowlimit){
+	geocode: function(address, rowlimit) {
 		var me = this;
-		
+
+		if (!ymaps.geocode) {
+			ymaps.load(['package.full'], function() {
+				me.geocode(address);
+			});
+			return;
+		}
+
 		if (!address.hasOwnProperty('address') || address.address === null || address.address === '') {
 			var parts = [];
-			if (address.country && address.country.length > 3) {// Yandex.Maps do not support country codes in input
+			if (address.country && address.country.length > 3) { // Yandex.Maps do not support country codes in input
 				parts.push(address.country);
 			}
 			if (address.region) {
@@ -22,42 +30,43 @@ Geocoder: {
 			if (address.street) {
 				parts.push(address.street);
 			}
-
 			if (parts.length === 0){
 				parts.push(address);
 			}
 			
 			address = [];
 			address.address = parts.join(', ');
-	     }
+		}
 
 		if (!address.address) {
 			me.error_callback('Empty address passed to geocoder.');
 			return;
 		}
-		var geocoder = new YMaps.Geocoder(address.address, { results: rowlimit });
-		YMaps.Events.observe(geocoder, geocoder.Events.Load, function (response) {
-			if (response.found > 0) {
-				me.geocode_callback(response._objects);
-			} else {
-				me.error_callback(response);
+
+		var geocoder = ymaps.geocode(address.address, {results: rowlimit, json: true});
+		geocoder.then(
+			function (response) {
+				var collection = response.GeoObjectCollection;
+				if (collection.metaDataProperty.GeocoderResponseMetaData.results > 0) {
+					me.geocode_callback(collection, rowlimit);
+				} else {
+					me.error_callback(response);
+				}
+			},
+			function (error) {
+				me.error_callback(error);
 			}
-		});
- 
-		YMaps.Events.observe(geocoder, geocoder.Events.Fault, function (error) {
-			me.error_callback(error.message);
-		});
+		);
 	},
-	
-	geocode_callback: function(response){
+	geocode_callback: function(collection, rowlimit){
 		var places = [];
 	 
-		for (i=0; i<response.length; i++) {
-			var geoObject = response[i];
+		for (i=0; i<collection.featureMember.length; i++) {
+			var geoObject = collection.featureMember[i].GeoObject;
 
 			var location = { street: '', locality: '', region: '', country: '' };
 
-			var locLev = geoObject.AddressDetails;
+			var locLev = geoObject.metaDataProperty.GeocoderMetaData.AddressDetails;
 			if (locLev.Country) {
 				locLev = locLev.Country;
 				location.country = locLev.CountryName;
@@ -83,12 +92,12 @@ Geocoder: {
 				location.street = street.join(', ');
 			}
 
-			var point = geoObject.getGeoPoint();
-			location.point = new mxn.LatLonPoint(point.getY(), point.getX());
-		
+			var point = geoObject.Point.pos.split(' ');
+			location.point = new mxn.LatLonPoint(parseFloat(point[1]), parseFloat(point[0]));
+				
 			places.push(location);
 		}
-		
+
 		this.callback(places);
 	}
 }

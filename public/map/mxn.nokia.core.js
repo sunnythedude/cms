@@ -1,39 +1,50 @@
-mxn.register('ovi', {
+mxn.register('nokia', {
 
 Mapstraction: {
-
 	init: function(element, api) {
 		var me = this;
-		var ovi_map;
-		var mapLoaded = false;
+		var	nokia_map;
+		var	mapLoaded = false;
 		
+		if (typeof nokia.maps === 'undefined') {
+			throw new Error(api + ' map script not imported');
+		}
+
 		var eventStates = {
 			"center": false,
 			"zoom": false,
 			"mapsize": false
 		};
 		
-		if (typeof ovi.mapsapi.map.Display === 'undefined') {
-			throw new Error(api + ' map script not imported');
-		}
-
-		ovi_map = new ovi.mapsapi.map.Display (element);
-		ovi_map.addComponent(new ovi.mapsapi.map.component.InfoBubbles());
-		ovi_map.addComponent(new ovi.mapsapi.map.component.Behavior());
+		this.controls =  {
+			pan: null,
+			zoom: null,
+			overview: null,
+			scale: null,
+			map_type: null
+		};
+		
+		nokia_map = new nokia.maps.map.Display(element);
+		nokia_map.addComponent(new nokia.maps.map.component.InfoBubbles());
+		nokia_map.addComponent(new nokia.maps.map.component.Behavior());
 
 		// Handle click event
-		ovi_map.addListener('click', function(event){
-			coords = ovi_map.pixelToGeo(event.targetX, event.targetY);
-			me.click.fire({'location': new mxn.LatLonPoint(coords.latitude, coords.longitude)});
+		nokia_map.addListener('click', function(event) {
+			coords = nokia_map.pixelToGeo(event.targetX, event.targetY);
+			me.click.fire(
+				{
+					'location': new mxn.LatLonPoint(coords.latitude, coords.longitude)
+				});
 		}, false);
 
 		// Handle endPan (via centre change) and zoom events
-		// the Ovi Maps API doesn't have a discrete event for each of these events
+		// the Nokia Maps API doesn't have a discrete event for each of these events
 		// instead it uses a start/update/end sequence of events, where update may happen
-		// multiple times or not at all, so we need to keep track of which Ovi events have
+		// multiple times or not at all, so we need to keep track of which Nokia events have
 		// fired during a start(/update) event sequence and then fire the relevent Mapstraction
-		// events upon receiving the Ovi end event
-		ovi_map.addListener('mapviewchangestart', function(event){
+		// events upon receiving the Nokia end event
+
+		nokia_map.addListener('mapviewchangestart', function(event) {
 			if (event.data & event.MAPVIEWCHANGE_CENTER) {
 				eventStates.center = true;
 			}
@@ -45,7 +56,7 @@ Mapstraction: {
 			}
 		}, false);
 
-		ovi_map.addListener('mapviewchangeupdate', function(event){
+		nokia_map.addListener('mapviewchange', function(event) {
 			if (event.data & event.MAPVIEWCHANGE_CENTER) {
 				eventStates.center = true;
 			}
@@ -57,25 +68,28 @@ Mapstraction: {
 			}
 		}, false);
 
-		ovi_map.addListener('mapviewchangeend', function(event){
-			// The Ovi Maps API doesn't support a "map loaded" event, but both a
-			// "centre" and "size" mapviewchangestart/mapviewchangeupdate/mapviewchangeend
+		nokia_map.addListener('mapviewchangeend', function(event) {
+			// The Nokia Maps API doesn't support a "map loaded" event, but both a
+			// "centre" and "size" mapviewchangestart/mapviewchange/mapviewchangeend
 			// event sequence will be fired as part of the initial loading so we can trap
 			// this and fire the MXN "load" event.
 			
 			if (!mapLoaded) {
-				if (eventStates.center && eventStates.mapsize) {
+				if (eventStates.center && eventStates.mapsize && eventStates.zoom) {
 					mapLoaded = true;
 					eventStates.mapsize = false;
+					eventStates.center = false;
+					eventStates.zoom = false;
 					me.load.fire();
 				}
-			} 
+			}
+			
 			else {
-			    if (eventStates.center) {
+				if (eventStates.center) {
 					eventStates.center = false;
 					me.moveendHandler(me);
 					me.endPan.fire();
-			    }
+				}
 			}
 			
 			if (eventStates.zoom) {
@@ -84,22 +98,21 @@ Mapstraction: {
 			}
 		}, false);
 
-		this.maps[api] = ovi_map;
+		this.maps[api] = nokia_map;
 		this.loaded[api] = true;
 	},
 	
 	applyOptions: function() {
 		var map = this.maps[this.api];
-		
-		if (this.options.enableScrollWheelZoom) {
-			map.addComponent(new ovi.mapsapi.map.component.zoom.MouseWheel());
-		} 
+	    if (this.options.enableScrollWheelZoom) {
+			map.addComponent(new nokia.maps.map.component.zoom.MouseWheel());
+		}
 		else {
-			var mousewheel = map.getComponentById('zoom.MouseWheel');
-			if (mousewheel) {
-				map.removeComponent(mousewheel);
+			var cid = map.getComponentById('zoom.MouseWheel');
+			if (cid !== null) {
+				map.removeComponent(cid);
 			}
-		}	
+		}
 	},
 	
 	resizeTo: function(width, height) {
@@ -122,19 +135,20 @@ Mapstraction: {
 		
 		if ('pan' in args && args.pan) {
 			cid = map.getComponentById('Behavior');
-			if (cid === null) {
-				map.addComponent(new ovi.mapsapi.map.component.Behavior());
+			if (this.controls.pan === null) {
+				this.controls.pan = new nokia.maps.map.component.Behavior();
+				map.addComponent(this.controls.pan);
 			}
 		}
-		
+
 		else {
-			cid = map.getComponentById('Behavior');
-			if (cid !== null) {
-				map.removeComponent(cid);
+			if (this.controls.pan !== null) {
+				map.removeComponent(this.controls.pan);
+				this.controls.pan = null;
 			}
 		}
 		
-		// TODO: The Ovi Maps API doesn't currently differentiate between large and small
+		// TODO: The Nokia Maps API doesn't currently differentiate between large and small
 		// style of Zoom controls so, for now, make them functionally equivalent
 		if ('zoom' in args) {
 			if (args.zoom || args.zoom == 'large' || args.zoom == 'small') {
@@ -143,37 +157,38 @@ Mapstraction: {
 		}
 
 		else {
-			cid = map.getComponentById('ZoomBar');
-			if (cid !== null) {
-				map.removeComponent(cid);
-			}
-		}
-
-		if ('overview' in args && args.overview) {
-			cid = map.getComponentById('Overview');
-			if (cid === null) {
-				map.addComponent(new ovi.mapsapi.map.component.Overview());
+			if (this.controls.zoom !== null) {
+				map.removeComponent(this.controls.zoom);
+				this.controls.zoom = null;
 			}
 		}
 		
-		else {
+		if ('overview' in args && args.overview) {
 			cid = map.getComponentById('Overview');
-			if (cid !== null) {
-				map.removeComponent(cid);
+			if (this.controls.overview === null) {
+				this.controls.overview = new nokia.maps.map.component.Overview();
+				map.addComponent(this.controls.overview);
+			}
+		}
+
+		else {
+			if (this.controls.overview !== null) {
+				map.removeComponent(this.controls.overview);
+				this.controls.overview = null;
 			}
 		}
 		
 		if ('scale' in args && args.scale) {
-			cid = map.getComponentById('ScaleBar');
-			if (cid === null) {
-				map.addComponent(new ovi.mapsapi.map.component.ScaleBar ());
+			if (this.controls.scale === null) {
+				this.controls.scale = new nokia.maps.map.component.ScaleBar();
+				map.addComponent(this.controls.scale);
 			}
 		}
 
 		else {
-			cid = map.getComponentById('ScaleBar');
-			if (cid !== null) {
-				map.removeComponent(cid);
+			if (this.controls.scale !== null) {
+				map.removeComponent(this.controls.scale);
+				this.controls.scale = null;
 			}
 		}
 		
@@ -182,20 +197,20 @@ Mapstraction: {
 		}
 
 		else {
-			cid = map.getComponentById('TypeSelector');
-			if (cid !== null) {
-				map.removeComponent(cid);
+			if (this.controls.map_type !== null) {
+				map.removeComponent(this.controls.map_type);
+				this.controls.map_type = null;
 			}
 		}
 	},
 
-	// TODO: The Ovi Maps API doesn't currently differentiate between large and small
+	// TODO: The Nokia Maps API doesn't currently differentiate between large and small
 	// style of Zoom controls so, for now, make them functionally equivalent
 	addSmallControls: function() {
 		var map = this.maps[this.api];
-		cid = map.getComponentById('ZoomBar');
-		if (cid === null) {
-			map.addComponent(new ovi.mapsapi.map.component.ZoomBar());
+		if (this.controls.zoom === null) {
+			this.controls.zoom = new nokia.maps.map.component.ZoomBar();
+			map.addComponent(this.controls.zoom);
 		}
 	},
 	
@@ -205,9 +220,9 @@ Mapstraction: {
 	
 	addMapTypeControls: function() {
 		var map = this.maps[this.api];
-		cid = map.getComponentById('TypeSelector');
-		if (cid === null) {
-			map.addComponent(new ovi.mapsapi.map.component.TypeSelector ());
+		if (this.controls.map_type === null) {
+			this.controls.map_type = new nokia.maps.map.component.TypeSelector();
+			map.addComponent(this.controls.map_type);
 		}
 	},
 	
@@ -221,10 +236,10 @@ Mapstraction: {
 	
 	addMarker: function(marker, old) {
 		var map = this.maps[this.api];
-		var ovi_marker = marker.toProprietary(this.api);
+		var	nokia_marker = marker.toProprietary(this.api);
 		
-		map.objects.add(ovi_marker);
-		return ovi_marker;
+		map.objects.add(nokia_marker);
+		return nokia_marker;
 	},
 	
 	removeMarker: function(marker) {
@@ -239,10 +254,10 @@ Mapstraction: {
 	
 	addPolyline: function(polyline, old) {
 		var map = this.maps[this.api];
-		var ovi_polyline = polyline.toProprietary(this.api);
+		var nokia_polyline = polyline.toProprietary(this.api);
 
-		map.objects.add(ovi_polyline);
-		return ovi_polyline;
+		map.objects.add(nokia_polyline);
+		return nokia_polyline;
 	},
 	
 	removePolyline: function(polyline) {
@@ -280,9 +295,9 @@ Mapstraction: {
 		var map = this.maps[this.api];
 		var sw = bbox.getSouthWest().toProprietary(this.api);
 		var ne = bbox.getNorthEast().toProprietary(this.api);
-		var ovi_bb = new ovi.mapsapi.geo.BoundingBox(sw, ne);
+		var nokia_bb = new nokia.maps.geo.BoundingBox(sw, ne);
 		
-		return map.getBestZoomLevel(ovi_bb);
+		return map.getBestZoomLevel(nokia_bb);
 	},
 	
 	setMapType: function(type) {
@@ -290,19 +305,19 @@ Mapstraction: {
 		
 		switch (type) {
 			case mxn.Mapstraction.ROAD:
-				map.set("baseMapType", map.NORMAL);
+				map.set("baseMapType", nokia.maps.map.Display.NORMAL);
 				break;
 			case mxn.Mapstraction.PHYSICAL:
-				map.set("baseMapType", map.TERRAIN);
+				map.set("baseMapType", nokia.maps.map.Display.TERRAIN);
 				break;
 			case mxn.Mapstraction.HYBRID:
-				map.set("baseMapType", map.SATELLITE);
+				map.set("baseMapType", nokia.maps.map.Display.SATELLITE);
 				break;
 			case mxn.Mapstraction.SATELLITE:
-				map.set("baseMapType", map.SATELLITE);
+				map.set("baseMapType", nokia.maps.map.Display.SATELLITE_PLAIN);
 				break;
 			default:
-				map.set("baseMapType", map.NORMAL);
+				map.set("baseMapType", nokia.maps.map.Display.NORMAL);
 				break;
 		}	// end-switch ()
 	},
@@ -311,7 +326,7 @@ Mapstraction: {
 		var map = this.maps[this.api];
 		var type = map.baseMapType;
 		
-		switch(type) {
+		switch (type) {
 			case map.NORMAL:
 				return mxn.Mapstraction.ROAD;
 			case map.TERRAIN:
@@ -328,21 +343,18 @@ Mapstraction: {
 		var bbox = map.getViewBounds();
 		var nw = bbox.topLeft;
 		var se = bbox.bottomRight;
-		
+
 		return new mxn.BoundingBox(se.latitude, nw.longitude, nw.latitude, se.longitude);
 	},
 	
 	setBounds: function(bounds) {
 		var map = this.maps[this.api];
-
-		var sw = bounds.getSouthWest();
-		var ne = bounds.getNorthEast();
-
-		var nw = new mxn.LatLonPoint(ne.lat, sw.lon).toProprietary(this.api);
-		var se = new mxn.LatLonPoint(sw.lat, ne.lon).toProprietary(this.api);
-		var ovi_bb = new ovi.mapsapi.geo.BoundingBox(nw, se);
+		var nw = bounds.getNorthWest().toProprietary(this.api);
+		var se = bounds.getSouthEast().toProprietary(this.api);
+		var nokia_bb = new nokia.maps.geo.BoundingBox(nw, se);
 		var keepCentre = false;
-		map.zoomTo(ovi_bb, keepCentre);
+		
+		map.zoomTo(nokia_bb, keepCentre);
 	},
 	
 	addImageOverlay: function(id, src, opacity, west, south, east, north, oContext) {
@@ -358,11 +370,50 @@ Mapstraction: {
 	},
 	
 	addTileLayer: function(tile_url, opacity, label, attribution, min_zoom, max_zoom, map_type, subdomains) {
-		throw new Error('Mapstraction.addTileLayer is not currently supported by provider ' + this.api);
+		var map = this.maps[this.api];
+		var z_index = this.tileLayers.length || 0;
+		
+		var tileProviderOptions = {
+			getUrl: function(zoom, row, column) {
+				var url = mxn.util.sanitizeTileURL(tile_url);
+				if (typeof subdomains !== 'undefined') {
+					url = mxn.util.getSubdomainTileURL(url, subdomains);
+				}
+				url = url.replace(/\{z\}/gi, zoom).replace(/\{x\}/gi, column).replace(/\{y\}/gi, row);
+				return url;
+			}, // obligatory 
+			max: max_zoom,  // max zoom level for overlay
+			min: min_zoom,  // min zoom level for overlay
+			opacity: opacity, // 0 = transparent overlay, 1 = opaque
+			alpha: true, // renderer to read alpha channel    
+			getCopyrights : function(area, zoom) {
+				return [{
+					label: attribution,
+					alt: attribution
+				}];
+			}// display copyright
+		};	
+		
+		var overlay =  new nokia.maps.map.provider.ImgTileProvider (tileProviderOptions);                
+		this.tileLayers.push( [tile_url, overlay, true, z_index] );
+		return map.overlays.add(overlay);
 	},
 	
 	toggleTileLayer: function(tile_url) {
-		throw new Error('Mapstraction.toggleTileLayer is not currently supported by provider ' + this.api);
+		var map = this.maps[this.api];
+		for (var f = 0; f < this.tileLayers.length; f++) {
+			var tileLayer = this.tileLayers[f];
+			if (tileLayer[0] == tile_url) {
+				if (tileLayer[2]) {
+					tileLayer[2] = false;
+					map.overlays.remove(tileLayer[1]);
+				}
+				else {
+					tileLayer[2] = true;
+					map.overlays.add(tileLayer[1]);
+				}
+			}
+		}
 	},
 	
 	getPixelRatio: function() {
@@ -371,8 +422,8 @@ Mapstraction: {
 	
 	mousePosition: function(element) {
 		var map = this.maps[this.api];
-		var locDisp = document.getElementById(element);
-		var coords;
+		var	locDisp = document.getElementById(element);
+		var	coords;
 		
 		if (locDisp !== null) {
 			map.addListener('mousemove', function(event){
@@ -387,12 +438,12 @@ Mapstraction: {
 LatLonPoint: {
 	
 	toProprietary: function() {
-		return new ovi.mapsapi.geo.Coordinate(this.lat, this.lon);
+		return new nokia.maps.geo.Coordinate(this.lat, this.lon);
 	},
 	
-	fromProprietary: function(oviCoordinate) {
-		this.lat = oviCoordinate.latitude;
-		this.lon = oviCoordinate.longitude;
+	fromProprietary: function(nokiaCoordinate) {
+		this.lat = nokiaCoordinate.latitude;
+		this.lon = nokiaCoordinate.longitude;
 		this.lng = this.lon;
 	}
 },
@@ -412,16 +463,16 @@ Marker: {
 
 		this.proprietary_infobubble = null;
 
-		var prop_marker = new ovi.mapsapi.map.Marker(
-				self.location.toProprietary('ovi'),
+		var	prop_marker = new nokia.maps.map.Marker(
+				self.location.toProprietary('nokia'),
 				properties);
 
 		if (this.infoBubble) {
-			var event_action = "click";
+			var	event_action = "click";
 			if (this.hover) {
 				event_action = "mouseover";
 			}
-			prop_marker.addListener(event_action, function(event) {
+			prop_marker.addListener(event_action, function() {
 				self.openBubble();
 			}, false);
 		}
@@ -430,7 +481,7 @@ Marker: {
 			prop_marker.enableDrag();
 			
 			prop_marker.addListener("dragstart", function(event){
-				var bc = self.map.getComponentById("InfoBubbles");
+				var	bc = self.map.getComponentById("InfoBubbles");
 
 				if (bc.bubbleExists(self.proprietary_infobubble)) {
 					self.closeBubble();
@@ -439,7 +490,7 @@ Marker: {
 			}, false);
 			
 			prop_marker.addListener("dragend", function(event){
-				var xy = event.dataTransfer.getData("application/map-drag-object-offset");
+				var	xy = event.dataTransfer.getData("application/map-drag-object-offset");
 				var new_coords = self.map.pixelToGeo(
 					event.displayX - xy.x + prop_marker.anchor.x,
 					event.displayY - xy.y + prop_marker.anchor.y
@@ -462,20 +513,20 @@ Marker: {
 		prop_marker.addListener('click', function (event) {
 				prop_marker.mapstraction_marker.click.fire(event);
 			}, false);
-
+		
 		return prop_marker;
 	},
 	
 	openBubble: function() {
 		if (!this.map) {
-			throw new Error('Marker.openBubble: This marker must be added to a map in order to manage a Bubble for provider ' + this.api);
+			throw new Error('Marker.openBubble; this marker must be added to a map in order to manage a Bubble');
 		}
-		this.proprietary_infobubble = this.map.getComponentById("InfoBubbles").addBubble(this.infoBubble, this.location.toProprietary('ovi'));
+		this.proprietary_infobubble = this.map.getComponentById("InfoBubbles").addBubble(this.infoBubble, this.location.toProprietary('nokia'));
 	},
 	
 	closeBubble: function() {
 		if (!this.map) {
-			throw new Error('Marker.closeBubble: This marker must be added to a map in order to manage a Bubble for provider ' + this.api);
+			throw new Error('Marker.closeBubble; this marker must be added to a map in order to manage a Bubble');
 		}
 
 		if (this.map.getComponentById("InfoBubbles").bubbleExists(this.proprietary_infobubble)) {
@@ -501,10 +552,24 @@ Marker: {
 Polyline: {
 	
 	toProprietary: function() {
-		var coords = [];
+		// nokia.maps.map.Polyline
+		// color = nokia.maps.util.Pen.strokeColor
+		// width = nokia.maps.util.Pen.lineWidth
+		// opacity = 
+		// closed = false
+		// fillColor = brush.color
+
+		// nokia.maps.map.Polygon
+		// color = nokia.maps.util.Pen.strokeColor
+		// width = nokia.maps.util.Pen.lineWidth
+		// opacity = 
+		// closed = true
+		// fillColor = nokia.maps.util.Brush.color
+		
+		var	coords = [];
 		
 		for (var i=0, length=this.points.length; i<length; i++) {
-			coords.push(this.points[i].toProprietary('ovi'));
+			coords.push(this.points[i].toProprietary('nokia'));
 		}
 		
 		if (this.closed) {
@@ -516,32 +581,39 @@ Polyline: {
 		else if (this.points[0].equals(this.points[this.points.length - 1])) {
 			this.closed = true;
 		}
-
+		
 		if (this.closed) {
-			var polycolor = new mxn.util.Color();
+			var	polycolor = new mxn.util.Color();
 
-			polycolor.setHexColor(this.color);
+			polycolor.setHexColor(this.fillColor);
 
 			var polycolor_rgba = "rgba(" + polycolor.red + "," + polycolor.green + "," +
-				polycolor.blue + "," + this.opacity + ")";
+				polycolor.blue + "," + (this.opacity || 1.0) + ")";
+
 			var polygon_options = {
-				'visibility' : true,
-				'fillColor' : polycolor_rgba,
-				'color' : this.color,
-				'stroke' : 'solid',
-				'width' : this.width
+				visibility: true,
+				pen: {
+					strokeColor: this.color,
+					lineWidth: this.width
+					 },
+				brush: {
+					fill: 'solid',
+					color: polycolor_rgba
+				}
 			};
-			this.proprietary_polyline = new ovi.mapsapi.map.Polygon (coords, polygon_options);
+
+			this.proprietary_polyline = new nokia.maps.map.Polygon(coords, polygon_options);
 		}
 		
 		else {
 			var polyline_options = {
-				'visibility' : true,
-				'color' : this.color,
-				'stroke' : 'solid',
-				'width' : this.width
+				visibility : true,
+				pen: {
+					strokeColor: this.color,
+					lineWidth: this.width
+				}
 			};
-			this.proprietary_polyline = new ovi.mapsapi.map.Polyline (coords, polyline_options);
+			this.proprietary_polyline = new nokia.maps.map.Polyline(coords, polyline_options);
 		}
 		
 		return this.proprietary_polyline;
@@ -554,7 +626,6 @@ Polyline: {
 	hide: function() {
 		this.proprietary_polyline.set('visibility', false);
 	}
-	
 }
 	
 });

@@ -5,35 +5,39 @@ Geocoder: {
 	init: function() {
 		var me = this;
 		var ovi_geocoder;
-		
-		if (ovi.mapsapi) {
-			ovi_geocoder = new ovi.mapsapi.search.Manager();
-			ovi_geocoder.addObserver("state", function (manager, key, value){
-				if (value == "finished" || value == "failed") {
-					me.geocode_callback (manager.locations, value);
-				}
-			});
-			this.geocoders[this.api] = ovi_geocoder;
+
+		if (typeof ovi.mapsapi.search.Manager === 'undefined') {
+			throw new Error(api + ' map script not imported');
 		}
-		
-		else {
-			alert(api + ' map script not imported');
-		}
+
+		ovi_geocoder = new ovi.mapsapi.search.Manager();
+		ovi_geocoder.addObserver("state", function (manager, key, value){
+			if (value == "finished" || value == "failed") {
+				me.geocode_callback (manager.locations, value);
+			}
+		});
+		this.geocoders[this.api] = ovi_geocoder;
 	},
-	
-	geocode: function(address){
+
+	geocode: function(address, rowlimit){
 		var ovi_geocoder = this.geocoders[this.api];
+		this.rowlimit = rowlimit;
 		
-		ovi_geocoder.geocode(address);
+		if (address instanceof mxn.LatLonPoint) {
+			ovi_geocoder.reverseGeocode(address);
+		}
+		else {
+			ovi_geocoder.geocode(address);
+		}
 	},
-	
+
 	geocode_callback: function(response, status){
 		var ovi_geocoder = this.geocoders[this.api];
 
 		if (status == "failed") {
 			var error_cause = ovi_geocoder.getErrorCause();
 			var error_status = "";
-			
+
 			if (error_cause.type) {
 				error_status = error_cause.type;
 				if (error_cause.subtype) {
@@ -43,29 +47,33 @@ Geocoder: {
 					error_status += ", " + error_cause.message;
 				}
 			}
-			
+
 			else {
 				error_status = "Geocoding failure";
 			}
-			
+
 			this.error_callback(error_status);
 		}
-		
+
 		else if (status == "finished") {
-			var return_location = {};
-			var street_components = [];
-			var locality_components = [];
-			var region_components = [];
+			var places = [];
 
-			return_location.street = '';
-			return_location.locality = '';
-			return_location.postcode = '';
-			return_location.region = '';
-			return_location.country = '';
+			for (i=0; i<response.length; i++) {
+				place = response[i];
 
-			if (response.length > 0) {
-				var address = response[0].address;
-				var coords = response[0].displayPosition;
+				var return_location = {};
+				var street_components = [];
+				var locality_components = [];
+				var region_components = [];
+
+				return_location.street = '';
+				return_location.locality = '';
+				return_location.postcode = '';
+				return_location.region = '';
+				return_location.country = '';
+
+				var address = place.address;
+				var coords = place.displayPosition;
 
 				if (address.street) {
 					street_components.push(address.street);
@@ -107,9 +115,16 @@ Geocoder: {
 				}
 
 				return_location.point = new mxn.LatLonPoint(coords.latitude, coords.longitude);
-				this.callback(return_location);
+
+				places.push(return_location);
 			}
+
+			if (places.length > this.rowlimit) {
+				places.length = this.rowlimit;
+			}
+			this.callback(places);
 		}
 	}
 }
+
 });
