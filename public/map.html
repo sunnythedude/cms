@@ -12,7 +12,10 @@
 
 
         <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
-        <script src="map/mxn.js?(leaflet)"></script>
+		
+		<script src="map/mxn.js?(leaflet)"></script>
+		
+	
 
         <script type="text/javascript">
 
@@ -42,9 +45,11 @@
 
             var marker = new mxn.Marker(latlon);
             
+            var latlon = new mxn.LatLonPoint(locations.vanarts.lat, locations.vanarts.lon);
             marker.setIcon('kim.png', [70, 60]);
             marker.setShadowIcon('shadow.png', [70, 60]);
             
+            map.setCenterAndZoom(latlon, locations.vanarts.zoom);
             map.addMarker(marker);
             
 //          marker.addData({'infoBubble': 'Gastown, Vancouver'});
