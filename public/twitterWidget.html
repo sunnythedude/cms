@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>2twitterApi.html</title>
+    </head>
+
+    <body>
+
+        <h1>Twitter</h1>
+        <h2>API</h2>
+
+        <p>As a user, show a Twitter timeline feed of VanArts.</p>
+
+        <h3>Technologies</h3>
+        <ul>
+            <li><a href="https://dev.twitter.com/docs">Twitter JS API</a></li>
+            <li><a href="https://www.npmjs.com/package/twit">Twitter API client for node</a></li>
+            <li>hapi.js</li>
+            <li>node.js</li>
+            <li>jQuery AJAX</li>
+            <li>jQuery</li>
+            <li>JavaScript</li>
+        </ul>
+
+        <h3>Live demo</h3>
+
+        <a class="twitter-timeline"  href="https://twitter.com/sunny_the_awsm" data-widget-id="565566155788910592">Tweets by @sunny_the_awsm</a>
+        <script>
+            !function (d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
+                if (!d.getElementById(id)) {
+                    js = d.createElement(s);
+                    js.id = id;
+                    js.src = p + "://platform.twitter.com/widgets.js";
+                    fjs.parentNode.insertBefore(js, fjs);
+                }
+            }(document, "script", "twitter-wjs");
+        </script>
+
+
+    </body>
+</html>
