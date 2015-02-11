@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>facebook</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body>
+        <h3>Live Demo</h3>
+
+        <div id="fullname">
+
+        </div>
+
+        <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+        <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+        <script>
+            $.ajax({
+                url: 'http://graph.facebook.com/abhishek.gyaneshwar',
+                success: function(response) {
+                    var output = "Facebook user is " + response.name + "<br></br>";
+                    $('#fullname').append(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/138499699508135',
+                success: function(response) {
+                    var output = "Vanarts' geocode is " + response.location.latitude + ', ' + response.location.longitude + "<br></br>";
+                    $('#fullname').append(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/abhishek.gyaneshwar/picture',
+                success: function(response) {
+                    var output = "<img src='http://graph.facebook.com/abhishek.gyaneshwar/picture'>" + "<br></br>";
+                    $('#fullname').append(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/vancouver.institute.of.media.arts?fields=cover',
+                success: function(response) {
+                    var output = "<img src='" + response.cover.source + "'>" + "<br></br>";
+                    $('#fullname').append(output);
+                }
+            });
+        </script>
+
+
+    </body>
+</html>

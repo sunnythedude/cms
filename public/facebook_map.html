@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>facebook_map.html</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width">
+        <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.css" />
+
+        <style>
+            .vanarts {
+                width: 200px;
+                padding: 10px 0 6px;
+            }
+            .leaflet-popup-content-wrapper {
+                border-radius: 0;
+                text-align: center;
+            }
+        </style>
+
+    </head>
+    <body>
+        <h3>Live demo</h3>
+        <div id="mapBox" style="height: 400px;"></div>
+
+
+        <script src="http://cdn.leafletjs.com/leaflet-0.7.3/leaflet.js"></script>
+        <script src="map/mxn.js?(leaflet)"></script>
+        <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+        <script src="//code.jquery.com/jquery-migrate-1.2.1.min.js"></script>
+        <script type="text/javascript">
+
+            var map = new mxn.Mapstraction('mapBox', 'leaflet');
+
+            $.ajax({
+                url: 'http://graph.facebook.com/vancouver.institute.of.media.arts',
+                success: function (response) {
+                    var zoom = 20;
+                    var latlon = new mxn.LatLonPoint(response.location.latitude, response.location.longitude);
+                    map.setCenterAndZoom(latlon, zoom);
+                    var marker = new mxn.Marker(latlon);
+
+                    marker.setIcon('kim.png', [70, 60]);
+                    marker.setShadowIcon('shadow.png', [70, 60]);
+
+                    map.addMarker(marker);
+                    marker.setInfoBubble("<img class='vanarts' src='" + response.cover.source + "'>" + "<br>" + "<a href='https://www.google.ca/maps/@49.282801,-123.115049,3a,75y,231.21h,90.76t/data=!3m4!1e1!3m2!1siqpvJVr3wLzuRaOUUgw38g!2e0!6m1!1e1'>Street View</a>");
+                    marker.openBubble();
+                }
+            });
+
+            map.addSmallControls();
+
+
+        </script>
+    </body>
+</html>
