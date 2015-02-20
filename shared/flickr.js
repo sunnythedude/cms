@@ -15,6 +15,17 @@ var createJpgPath = function (photos) {
 	return photoSrc;
 };
 
+var myflickrOptions = {
+	"url": 'https://api.flickr.com/services/rest/',
+	"data": {
+		"method": 'flickr.people.getPublicPhotos', // flickr.photos.search
+		"format": 'json',
+		"nojsoncallback": 1
+	},
+	"json": true
+};
+
 if (typeof module !== "undefined") {
 	module.exports.createJpgPath = createJpgPath;
+	module.exports.options = myflickrOptions;
 }
