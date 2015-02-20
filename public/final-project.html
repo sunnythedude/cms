@@ -50,18 +50,25 @@
             <li>For point breakdown consult the <a href="#Expectations">Expectations</a> section. <i>3 additional points</i> for completing all of the expectations.  For a total of twenty five points for this final project.</li>
             <li>Deadline is Feb 27th at 23:59 Pacific.  <b>Submission details</b> <i>2 points</i> will be provided for an on-time delivery to <a href="mailto:dan@vanarts.com">dan@vanarts.com</a>.  2 points will be deducted from your total for every late 24-hour day.</li>
         </ul>
+
+        <h2>Live Project</h2>
+
+        <div id="fullname">
+
+        </div>
+
         <!-- Flickr API global variables -->
         <script src="shared/credentials.js"></script>
         <script src="shared/flickr.js"></script>
         <!-- jQuery library -->
         <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
-        
-        
+
+
         <!-- Page specic code -->
         <script>
-            
+
             //* Flickr *//
-            
+
             myflickrOptions.data.api_key = credentials.flickr.api_key;
             myflickrOptions.data.user_id = credentials.flickr.user_id;
             $.ajax({
@@ -76,14 +83,14 @@
                     $('body').append(html);
                 }
             });
-            
+
             ///////////////////////************************///////////////////////////
-            
+
             //* Facebook *//
-            
+
             $.ajax({
                 url: 'http://graph.facebook.com/abhishek.gyaneshwar/picture',
-                success: function(response) {
+                success: function (response) {
                     var output = "<img src='http://graph.facebook.com/abhishek.gyaneshwar/picture'>" + "<br></br>";
                     $('#fullname').append(output);
                 }
@@ -91,9 +98,9 @@
 
             ///////////////////////************************///////////////////////////
 
-            
+
         </script>
-        
-        
+
+
     </body>
 </html>
