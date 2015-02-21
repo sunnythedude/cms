@@ -52,7 +52,7 @@ server.route({
 		httpRequest(flickr, function (error, incomingMessage, response) {
 			if (!error && incomingMessage.statusCode === 200) {
 				var photoSrc = flickrLib.createJpgPath(response.photos.photo);
-				for (var i = 0; len = photoSrc.length; i < len; i++) {
+				for (var i = 0, len = photoSrc.length; i < len; i++) {
 				html += "img src='" + photoSrc[i] + "'>";
 				};
 
