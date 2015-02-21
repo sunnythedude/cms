@@ -350,6 +350,15 @@
 //            var Twit = require('twit');
             var T = credentials.twitter;
             console.log(T);
+            T.get('statuses/user_timeline', {screen_name: 'vanarts', count: 4}, function (err, data, response) {
+                data.forEach(function (record, idx) {
+                    tweetTxt = record.text;
+                    twitterArray.push({"tweet": tweetTxt, "tweetDate": record.created_at, "index": idx});
+                });
+                callback(false, twitterArray);
+            });
+
+
 
 
 
