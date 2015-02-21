@@ -209,25 +209,25 @@
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q2" value="1">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="fb1" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q2" value="2">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="fb2" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q2" value="3">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="fb3" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q2" value="4">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="fb4" alt="">
                         </label>
                     </div>
                 </div>
@@ -316,8 +316,29 @@
             $.ajax({
                 url: 'http://graph.facebook.com/abhishek.gyaneshwar/picture',
                 success: function (response) {
-                    var output1 = "<img src='http://graph.facebook.com/abhishek.gyaneshwar/picture'>" + "<br></br>";
-                    $('#fullname').append(output1);
+                    var output = "<img src='http://graph.facebook.com/abhishek.gyaneshwar/picture'>" + "<br></br>";
+                    $('#fb1').replaceWith(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/WataruOguchi/picture',
+                success: function (response) {
+                    var output = "<img src='http://graph.facebook.com/WataruOguchi/picture'>" + "<br></br>";
+                    $('#fb2').replaceWith(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/melanie.pellegrino.94/picture',
+                success: function (response) {
+                    var output = "<img src='http://graph.facebook.com/melanie.pellegrino.94/picture'>" + "<br></br>";
+                    $('#fb3').replaceWith(output);
+                }
+            });
+            $.ajax({
+                url: 'http://graph.facebook.com/troy.strachan/picture',
+                success: function (response) {
+                    var output = "<img src='http://graph.facebook.com/troy.strachan/picture'>" + "<br></br>";
+                    $('#fb4').replaceWith(output);
                 }
             });
 
