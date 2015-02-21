@@ -20,6 +20,10 @@
             label > input:checked + img{ /* (RADIO CHECKED) IMAGE STYLES */
                 border:2px solid #f00;
             }
+            img {
+                width: 200px;
+                height: 200px;
+            }
         </style>
 
 
@@ -167,25 +171,25 @@
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q1" value="1">
-                            <img src="http://placehold.it/200x200" id="flickr" alt="">
+                            <img src="http://placehold.it/200x200" id="flickr1" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q1" value="2">
-                            <img src="http://placehold.it/200x200" id="flickr" alt="">
+                            <img src="http://placehold.it/200x200" id="flickr2" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q1" value="3">
-                            <img src="http://placehold.it/200x200" id="flickr" alt="">
+                            <img src="http://placehold.it/200x200" id="flickr3" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q1" value="4">
-                            <img src="http://placehold.it/200x200" id="flickr" alt="">
+                            <img src="http://placehold.it/200x200" id="flickr4" alt="">
                         </label>
                     </div>
                 </div>
@@ -237,7 +241,7 @@
                 <div class="col-md-12">
                     <h3>Pick a tweet, any tweet</h3>
                     <br>
-                    <div class="col-md-3">
+                    <div id="flickr" class="col-md-3">
                         <label>
                             <input type="radio" name="q3" value="1">
                             <img src="http://placehold.it/200x200" alt="">
@@ -298,9 +302,10 @@
                     var html = '';
                     photoSrc = createJpgPath(response.photos.photo);
                     for (var i = 0, len = photoSrc.length; i < len; i++) {
-                        html += "<img src='" + photoSrc[i] + "'>";
+                        html = "<img src='" + photoSrc[i] + "'>";
+                        var selector = '#flickr'+(i+1);
+                        $(selector).replaceWith(html);
                     }
-                    $('#flickr').append(html);
                 }
             });
 
