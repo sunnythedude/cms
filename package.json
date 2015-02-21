@@ -1,5 +1,5 @@
 {
-  "name": "shumpei",
+  "name": "sunny",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/Vanartsweb/shumpei.git"
+    "url": "https://github.com/sunnythedude"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/Vanartsweb/shumpei/issues"
   },
-  "homepage": "https://github.com/Vanartsweb/shumpei",
+  "homepage": "https://github.com/sunnythedude/cms",
   "dependencies": {
     "hapi": "^8.1.0",
     "hapi-dust": "^1.0.0",
