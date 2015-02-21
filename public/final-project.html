@@ -162,7 +162,7 @@
         <br>
 
         <!-- FLICKR -->
-        
+
         <div class="container center center-block well well-lg">
             <div class="row">
                 <div class="col-md-12">
@@ -198,9 +198,9 @@
 
         <br>
 
-        
+
         <!-- FACEBOOK -->
-        
+
         <div class="container center center-block well well-lg">
             <div class="row">
                 <div class="col-md-12">
@@ -235,7 +235,7 @@
         </div>
 
         <!-- TWITTER -->
-        
+
         <div class="container center center-block well well-lg">
             <div class="row">
                 <div class="col-md-12">
@@ -244,25 +244,25 @@
                     <div id="flickr" class="col-md-3">
                         <label>
                             <input type="radio" name="q3" value="1">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="feed1" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q3" value="2">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="feed2" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q3" value="3">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="feed3" alt="">
                         </label>
                     </div>
                     <div class="col-md-3">
                         <label>
                             <input type="radio" name="q3" value="4">
-                            <img src="http://placehold.it/200x200" alt="">
+                            <img src="http://placehold.it/200x200" id="feed4" alt="">
                         </label>
                     </div>
                 </div>
@@ -277,8 +277,8 @@
         <br>
 
         <a class="twitter-timeline"  href="https://twitter.com/sunny_the_awsm" data-widget-id="565566155788910592">Tweets by @sunny_the_awsm</a>
-        
-        
+
+
         <!-- jQuery library -->
         <script src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/js/bootstrap.min.js"></script>
@@ -303,7 +303,7 @@
                     photoSrc = createJpgPath(response.photos.photo);
                     for (var i = 0, len = photoSrc.length; i < len; i++) {
                         html = "<img src='" + photoSrc[i] + "'>";
-                        var selector = '#flickr'+(i+1);
+                        var selector = '#flickr' + (i + 1);
                         $(selector).replaceWith(html);
                     }
                 }
@@ -347,15 +347,11 @@
 
             //* Twitter *//
 
-            !function (d, s, id) {
-                var js, fjs = d.getElementsByTagName(s)[0], p = /^http:/.test(d.location) ? 'http' : 'https';
-                if (!d.getElementById(id)) {
-                    js = d.createElement(s);
-                    js.id = id;
-                    js.src = p + "://platform.twitter.com/widgets.js";
-                    fjs.parentNode.insertBefore(js, fjs);
-                }
-            }(document, "script", "twitter-wjs");
+            var Twit = require('twit');
+            var T = credentials.twitter;
+            console.log(T);
+
+
 
             ///////////////////////************************///////////////////////////
 
