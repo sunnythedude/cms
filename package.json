@@ -19,6 +19,7 @@
   "dependencies": {
     "hapi": "^8.1.0",
     "hapi-dust": "^1.0.0",
-    "request": "^2.51.0"
+    "request": "^2.51.0",
+    "twit": "^1.1.20"
   }
 }
